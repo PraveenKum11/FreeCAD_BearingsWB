@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
+  <name>Bearings</name>
+  <description>Parametric rolling bearings (deep groove, miniature, flanged) with edge snapping.</description>
+  <version>0.1.0</version>
+  <date>2026-10-09</date>
+  <maintainer email="praveen.kumar@rtcamp.com">Praveen Kumar</maintainer>
+  <license file="LICENSE">LGPL-2.1-or-later</license>
+  <icon>Icons/BearingsWB.svg</icon>
+  <content>
+    <workbench>
+      <classname>BearingsWorkbench</classname>
+      <subdirectory>./</subdirectory>
+      <freecadmin>1.0.0</freecadmin>
+      <tag>bearings</tag>
+      <tag>parts</tag>
+    </workbench>
+  </content>
+</package>
