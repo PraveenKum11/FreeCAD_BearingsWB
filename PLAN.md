@@ -97,6 +97,10 @@ Designation,d,D,B,r,B_shielded,D1,C1
     1.3 / 1.9 / 1.9 there, which are not ISO 582 radii, and SKF's own `ra` for 61816 (0.6) is
     below its stated `r`.
   - SKF data quirks to ignore: 61814 lists D1 = D, and 61808 lists d1 = D1.
+  - The full extracted data is kept in `reference/skf_deep_groove_specs.csv` (27 columns).
+    Regenerate it with `python3 tools/dev/skf_scrape.py`. The script is git-ignored, along
+    with its cache in `tools/dev/.skf_cache/`. It is sequential with a 3 s delay, reuses the
+    cache, and stops at the first non-200 response.
 
 ### 4.2 Computed internals (deep-groove ball)
 

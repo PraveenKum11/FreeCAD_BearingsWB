@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.FCBak
 .DS_Store
+
+# dev-only tools and their caches (SKF scraper)
+tools/dev/

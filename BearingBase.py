@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 """Parametric bearing FeaturePython object, view provider and attachment."""
 
+import re
+
 import FreeCAD
 
 import BearingData as BD
@@ -46,7 +48,9 @@ class BearingObject:
     def __init__(self, obj, series="60", attach_to=None):
         obj.Proxy = self
         self.face_colors = []
-        self.auto_label = None
+        # FreeCAD's initial label is not always equal to Name (e.g. after a GUI delete)
+        self.auto_label = obj.Label
+        self.auto_target = None
 
         obj.addProperty("App::PropertyEnumeration", "Series", GROUP,
                         translate("Bearings", "Bearing series"))
@@ -161,17 +165,33 @@ class BearingObject:
         obj.Placement = placement
 
     def _update_label(self, obj):
-        label = obj.FullDesignation
-        if obj.Label in (obj.Name, getattr(self, "auto_label", None)) and obj.Label != label:
-            obj.Label = label
-        self.auto_label = label
+        """Keep the label equal to the designation until the user renames the object.
+
+        auto_label is the label we (or FreeCAD, at creation) last assigned, which may differ
+        from both Name and the designation (e.g. "Bearing002" after a delete, or "608001"
+        when FreeCAD makes labels unique). auto_target is the designation it was made from.
+        """
+        target = obj.FullDesignation
+        auto = getattr(self, "auto_label", None)
+        # FreeCAD's default labels ("Bearing", "Bearing002") also count as auto, which repairs
+        # labels left stuck by v0.1's original Label == Name check
+        if obj.Label not in (obj.Name, auto) and not re.fullmatch(r"Bearing\d*", obj.Label):
+            return  # renamed by the user
+        if getattr(self, "auto_target", None) != target or obj.Label != auto:
+            obj.Label = target
+            self.auto_label = obj.Label
+            self.auto_target = target
 
     def dumps(self):
-        return {"auto_label": getattr(self, "auto_label", None)}
+        return {"auto_label": getattr(self, "auto_label", None),
+                "auto_target": getattr(self, "auto_target", None)}
 
     def loads(self, state):
         self.face_colors = []
-        self.auto_label = state.get("auto_label") if isinstance(state, dict) else None
+        state = state if isinstance(state, dict) else {}
+        self.auto_label = state.get("auto_label")
+        # documents saved before auto_target existed stored the designation in auto_label
+        self.auto_target = state.get("auto_target", self.auto_label)
 
 
 class ViewProviderBearing:

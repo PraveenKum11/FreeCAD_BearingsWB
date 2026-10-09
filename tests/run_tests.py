@@ -212,7 +212,55 @@ def test_feature_python():
         FreeCAD.closeDocument(doc.Name)
 
 
-for test in (test_tables, test_internals, test_all_shapes, test_no_overlap, test_feature_python):
+def test_labels():
+    """Auto labels follow the designation until the user renames the object."""
+    doc = FreeCAD.newDocument("BearingLabels")
+    try:
+        # after a GUI delete FreeCAD gives new objects a label that differs from Name
+        obj = doc.addObject("Part::FeaturePython", "Bearing")
+        obj.Label = "Bearing002"
+        BearingBase.BearingObject(obj, "60")
+        doc.recompute()
+        check(obj.Label == "608", "label with initial Label != Name: " + obj.Label)
+
+        # same designation twice: FreeCAD may make the label unique; it must keep following
+        twin = BearingBase.make_bearing("60", "608", doc=doc)
+        twin.Designation = "609"
+        doc.recompute()
+        check(twin.Label == "609", "duplicate-designation label should follow change: " + twin.Label)
+
+        # a user rename sticks
+        obj.Label = "Spindle bearing"
+        obj.Closure = "ZZ"
+        doc.recompute()
+        check(obj.Label == "Spindle bearing", "user label overwritten: " + obj.Label)
+
+        # still following after save / reopen
+        auto = BearingBase.make_bearing("68", "688", doc=doc)
+        name = auto.Name
+        path = os.path.join(tempfile.mkdtemp(), "labels.FCStd")
+        doc.saveAs(path)
+        FreeCAD.closeDocument(doc.Name)
+        doc = FreeCAD.openDocument(path)
+        auto = doc.getObject(name)
+        auto.Closure = "2RS"
+        doc.recompute()
+        check(auto.Label == "688-2RS", "label after reopen: " + auto.Label)
+        check(doc.getObject("Bearing").Label == "Spindle bearing",
+              "user label lost after reopen")
+
+        # a label left stuck by the original bug ("Bearing017", auto_label = designation)
+        stuck = BearingBase.make_bearing("62", "625", doc=doc)
+        stuck.Label = "Bearing017"  # differs from its Name
+        stuck.Proxy.auto_label = stuck.Proxy.auto_target = "625"
+        stuck.touch()
+        doc.recompute()
+        check(stuck.Label == "625", "stuck default label not repaired: " + stuck.Label)
+    finally:
+        FreeCAD.closeDocument(doc.Name)
+
+
+for test in (test_tables, test_internals, test_all_shapes, test_no_overlap, test_feature_python, test_labels):
     try:
         test()
     except Exception:
