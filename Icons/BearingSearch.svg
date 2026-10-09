@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<g transform="translate(2 2) scale(0.62)">
+<defs><radialGradient id="g" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#f4f6fa"/><stop offset="1" stop-color="#8a93a3"/></radialGradient></defs>
+<circle cx="32" cy="32" r="29" fill="url(#g)" stroke="#3b4250" stroke-width="2"/>
+<circle cx="32" cy="32" r="21" fill="#2c3340" stroke="#3b4250" stroke-width="1.5"/>
+<circle cx="32" cy="32" r="15" fill="url(#g)" stroke="#3b4250" stroke-width="1.5"/>
+<circle cx="32" cy="32" r="8" fill="#ffffff" stroke="#3b4250" stroke-width="2"/>
+<circle cx="50.00" cy="32.00" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="43.22" cy="46.07" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="27.99" cy="49.55" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="15.78" cy="39.81" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="15.78" cy="24.19" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="27.99" cy="14.45" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="43.22" cy="17.93" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+</g>
+<circle cx="40" cy="40" r="13" fill="#ffffff" fill-opacity="0.35" stroke="#1f6feb" stroke-width="5"/>
+<line x1="49.5" y1="49.5" x2="61" y2="61" stroke="#1f6feb" stroke-width="7" stroke-linecap="round"/>
+</svg>

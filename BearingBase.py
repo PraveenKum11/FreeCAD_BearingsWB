@@ -6,6 +6,7 @@ import re
 import FreeCAD
 
 import BearingData as BD
+import BRselection as BRS
 import BearingGeometry as BG
 from BRutils import icon, translate
 
@@ -16,32 +17,31 @@ MATCH_TO = ["Housing", "Shaft"]
 
 
 def _is_circular_edge(sub):
-    return hasattr(sub, "Curve") and sub.Curve.isDerivedFrom("Part::GeomCircle")
+    return BRS.is_circular_edge(sub)
 
 
 def edge_frame(obj, subname):
-    """Return (center, outward normal, diameter) of a circular edge of obj, or None.
+    """Return (center, outward normal, diameter, side) of a circular edge, or None.
 
-    The normal comes from an adjacent planar face so it points out of the material.
-    If there is none, it falls back to the circle axis.
+    Everything is in global coordinates. `subname` may be a plain element ("Edge3") or a
+    path from `obj` ("Body.Pad.Edge3"). The normal points out of the material (from an
+    adjacent planar face). `side` is "outside" for a hole, "inside" for a shaft, or None.
     """
-    import Part
+    edge, shape = BRS.resolve_edge(obj, subname)
+    if edge is None:
+        return None
+    normal = BRS.outward_normal(shape, edge)
+    return BRS.center_of(edge.Curve), normal, 2 * edge.Curve.Radius, BRS.edge_side(shape, edge)
 
-    try:
-        shape = obj.Shape
-        edge = shape.getElement(subname)
-    except Exception:
-        return None
-    if not _is_circular_edge(edge):
-        return None
-    circle = edge.Curve
-    normal = V(circle.Axis)
-    for face in shape.ancestorsOfType(edge, Part.Face):
-        if isinstance(face.Surface, Part.Plane):
-            u0, u1, v0, v1 = face.ParameterRange
-            normal = face.normalAt((u0 + u1) / 2, (v0 + v1) / 2)
-            break
-    return V(circle.Center), normal.normalize(), 2 * circle.Radius
+
+def match_kind(series, frame):
+    """Housing for a hole edge, Shaft for a shaft end; size heuristic if undetectable."""
+    side = frame[3]
+    if side == "outside":
+        return "Housing"
+    if side == "inside":
+        return "Shaft"
+    return BD.best_match_kind(series, frame[2])
 
 
 class BearingObject:
@@ -73,7 +73,7 @@ class BearingObject:
         obj.addProperty("App::PropertyEnumeration", "MatchTo", GROUP,
                         translate("Bearings", "With Designation 'Auto': match the edge to the bore (Shaft) or OD (Housing)"))
         obj.MatchTo = MATCH_TO
-        obj.addProperty("App::PropertyLinkSub", "BaseObject", GROUP,
+        obj.addProperty("App::PropertyLinkSubGlobal", "BaseObject", GROUP,
                         translate("Bearings", "Circular edge the bearing is attached to"))
         obj.addProperty("App::PropertyBool", "Invert", GROUP,
                         translate("Bearings", "Flip the bearing to the other side of the edge"))
@@ -100,7 +100,7 @@ class BearingObject:
             obj.BaseObject = attach_to
             frame = edge_frame(attach_to[0], attach_to[1][0])
             if frame:
-                obj.MatchTo = BD.best_match_kind(series, frame[2])
+                obj.MatchTo = match_kind(series, frame)
 
     @staticmethod
     def _designation_list(series):
@@ -156,11 +156,13 @@ class BearingObject:
 
         placement = obj.Placement
         if frame:
-            center, normal, _ = frame
+            center, normal = frame[0], frame[1]
             if obj.Invert:
                 normal = -normal
             placement = FreeCAD.Placement(center + normal * obj.Offset.Value,
                                           FreeCAD.Rotation(V(0, 0, 1), normal))
+            # the frame is global; express it in the container the bearing lives in
+            placement = BRS.parent_placement(obj).inverse().multiply(placement)
         obj.Shape = shape
         obj.Placement = placement
 

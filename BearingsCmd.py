@@ -6,16 +6,12 @@ import FreeCADGui
 
 import BearingBase
 import BearingData as BD
+import BRselection
 from BRutils import icon, translate
 
 
 def _selected_circular_edges():
-    result = []
-    for sel in FreeCADGui.Selection.getSelectionEx():
-        for name, sub in zip(sel.SubElementNames, sel.SubObjects):
-            if BearingBase._is_circular_edge(sub):
-                result.append((sel.Object, [name]))
-    return result
+    return [(obj, [sub]) for obj, sub in BRselection.selected_edges()]
 
 
 class InsertBearingCommand:

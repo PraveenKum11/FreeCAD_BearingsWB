@@ -10,9 +10,13 @@ class BearingsWorkbench(Workbench):
 
     def Initialize(self):
         import BearingsCmd
+        import BearingSearchGui  # noqa: F401  (registers Bearings_Search)
+        import PrintableBearingGui  # noqa: F401  (registers Bearings_PrintableBearing)
 
+        tools = ["Bearings_Search", "Bearings_PrintableBearing"]
         self.appendToolbar("Bearings", BearingsCmd.COMMANDS)
-        self.appendMenu("Bearings", BearingsCmd.COMMANDS)
+        self.appendToolbar("Bearing tools", tools)
+        self.appendMenu("Bearings", BearingsCmd.COMMANDS + ["Separator"] + tools)
 
     def GetClassName(self):
         return "Gui::PythonWorkbench"

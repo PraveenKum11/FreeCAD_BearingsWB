@@ -7,6 +7,7 @@ flange data. Internal geometry is computed in BearingGeometry.
 
 import csv
 import os
+import re
 
 from BRutils import dataPath, QT_TRANSLATE_NOOP
 
@@ -121,3 +122,75 @@ def best_match_kind(series, diameter):
     db = min(abs(r.d - diameter) for r in rows)
     dD = min(abs(r.D - diameter) for r in rows)
     return "Shaft" if db <= dD else "Housing"
+
+
+# ---------------------------------------------------------------- search
+
+_SIZE_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)(?:\s*[x×*]\s*(\d+(?:\.\d+)?))?\s*$", re.I)
+# closure codes at the end: 2RS / RS (SKF adds a digit: 2RS1), 2Z / ZZ / Z
+_CLOSURE_RE = re.compile(r"-?(?:(2RS|RS)\d?|(2Z|ZZ|Z))$", re.I)
+_CLOSURE_CODES = {"2RS": "2RS", "RS": "RS", "2Z": "ZZ", "ZZ": "ZZ", "Z": "Z"}
+_SKF_MINI_RE = re.compile(r"^6(1[89])/(\d)$")  # SKF 618/8 = 688, 619/5 = 695
+
+
+def parse_designation(text):
+    """Split a typed designation into (base, closure, flanged).
+
+    "F688-2RS" -> ("688", "2RS", True); "MF105ZZ" -> ("MR105", "ZZ", True);
+    "608" -> ("608", None, False). SKF miniature names "618/8" map to "688".
+    """
+    t = text.strip().upper().replace(" ", "")
+    closure = None
+    m = _CLOSURE_RE.search(t)
+    if m and m.start() > 0:
+        closure = _CLOSURE_CODES[m.group(1) or m.group(2)]
+        t = t[: m.start()]
+    flanged = False
+    if t.startswith("MF"):
+        t, flanged = "MR" + t[2:], True
+    elif t.startswith("F") and len(t) > 1 and t[1].isdigit():
+        t, flanged = t[1:], True
+    m = _SKF_MINI_RE.match(t)
+    if m:
+        t = "6" + ("8" if m.group(1) == "18" else "9") + m.group(2)
+    return t, closure, flanged
+
+
+def search(name=None, d=None, D=None, B=None, tol=0.0):
+    """Catalog rows matching every given criterion, as (series, row) pairs.
+
+    name: designation or its start ("62" finds 62xx and 62x), parsed with
+    parse_designation(); it may also be a size "8x22" / "8x22x7" (ID x OD [x height]).
+    d, D, B: bore, outside diameter, width in mm, matched within `tol`. B also matches
+    the shielded width. Results are sorted by bore, then OD, then designation.
+    """
+    flanged = False
+    if name:
+        size = _SIZE_RE.match(name)
+        if size:
+            d = float(size.group(1)) if d is None else d
+            D = float(size.group(2)) if D is None else D
+            if size.group(3) and B is None:
+                B = float(size.group(3))
+            name = None
+        else:
+            name, _, flanged = parse_designation(name)
+
+    def near(a, b):
+        return b is None or abs(a - b) <= tol + 1e-9
+
+    hits = []
+    for series in SERIES:
+        for r in load_table(series):
+            if name and not r.name.upper().startswith(name):
+                continue
+            if flanged and not r.has_flange:
+                continue
+            if not (near(r.d, d) and near(r.D, D)):
+                continue
+            if B is not None and not (near(r.B, B) or (r.B_shielded is not None and near(r.B_shielded, B))):
+                continue
+            hits.append((series, r))
+    exact = [h for h in hits if name and h[1].name.upper() == name]
+    rest = sorted((h for h in hits if h not in exact), key=lambda h: (h[1].d, h[1].D, h[1].name))
+    return exact + rest

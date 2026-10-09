@@ -20,6 +20,26 @@ The roadmap and design decisions are in [PLAN.md](PLAN.md).
 - The tables hold only boundary dimensions (ISO 15). Ball size, ball count and raceways are
   computed.
 
+## 3D-printable bearings (v0.2)
+
+**Bearing tools → 3D-printable bearing** builds a printable deep groove ball bearing as
+PartDesign bodies: races, a snap-in cage and optionally the balls, each exportable on its
+own. It is the DeepGrooveBallBearing macro, now part of the workbench.
+
+- Select a shaft end or housing bore edge, a PartDesign bore to groove, a standard
+  bearing to replace, or nothing.
+- Pick a catalog size (608, 625 …) or enter ID/OD/height, and pick a ball preset
+  (4.5 mm BB, 6 mm airsoft …).
+- Edit it later on the **BearingParameters** datum. The **PrintableBearing** object
+  reports invalid values and keeps the Part's label in step with the size.
+
+## Find bearing (v0.2)
+
+**Bearing tools → Find bearing** searches by **name** (`608`, `62`, `F688-2RS`, `618/8`,
+`8x22x7`), **inner diameter**, **outer diameter** or **height**, alone or combined, with
+an optional tolerance. Insert the result as a standard bearing, or open it as a printable
+one.
+
 ## Install (development)
 
 Link the repo into the FreeCAD 1.1 Mod folder and restart FreeCAD:
