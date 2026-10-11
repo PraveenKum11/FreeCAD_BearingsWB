@@ -76,6 +76,7 @@ BEARING_DOCS = {
 }
 DEFAULT_NUM_BALLS = 10
 DEFAULT_BALL_DIAMETER = 4.0
+OTHER_DIAMETER_OFFSET = 15.0  # starting OD = selected ID + 15 mm (or ID = selected OD - 15)
 CAGE_DEFAULTS = {
     "CageThickness": 1.5,
     "CageTopOffset": 0.5,
@@ -101,8 +102,9 @@ UI_HELP = {
     "body itself becomes the races. On a bore, the bore is the bearing's inner diameter: a "
     "thin inner race is split off and the rest of the body is the outer race. On an outer "
     "surface it is the other way round. A plain ring becomes the inner and outer race. "
-    "The other diameter and the height set where the groove goes; they are prefilled "
-    "from the body.\n"
+    "The other diameter and the height set where the groove goes: the other diameter "
+    "starts 15 mm from the selected one, the height is the length of the selected bore "
+    "or surface.\n"
     "Create races: build a new ring with both races from the sizes below. The selected "
     "edge (e.g. the end of a shaft or a housing bore; the origin if nothing is selected) "
     "sets the bearing's position and axis.",
@@ -237,6 +239,14 @@ def max_balls(id_, od, ball_dia, clearance=0.0):
     ratio = (ball_dia + clearance) / ((id_ + od) / 2)
     return int(math.pi / math.asin(ratio)) if ratio < 1 else 0
 
+
+def other_diameter(selected, selected_is_inner):
+    """Starting value for the diameter the selected edge doesn't fix: 15 mm larger for a
+    selected ID; 15 mm smaller for a selected OD, or half of it when that leaves no bore."""
+    if selected_is_inner:
+        return round(selected + OTHER_DIAMETER_OFFSET, 2)
+    smaller = selected - OTHER_DIAMETER_OFFSET
+    return round(smaller if smaller > 0 else selected / 2, 2)
 
 def fit_values(values, reset=False):
     """Defaults: ball Ø4, cage 1.5, 10 balls (as in deep-groove-bb.FCStd). They are set on

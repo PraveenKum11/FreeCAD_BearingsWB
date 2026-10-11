@@ -267,6 +267,12 @@ bought balls.
     don't know good sizes. Instead, a **status line** under the fields says what doesn't
     fit (e.g. "Number of balls must be between 1 and 9"), and OK refuses invalid values
     with a warning as before.
+  - **Other diameter starts 15 mm from the selected edge** (user decision, 2026-10-11),
+    in both modes: ID selected → OD = ID + 15; OD selected → ID = OD − 15, or OD / 2 when
+    that leaves no bore (`other_diameter()`). Groove mode no longer measures the body's
+    nearest outer cylinder for it (that gave e.g. OD 80 for a 30 mm bore in a large
+    plate). The height is still the length of the selected bore or surface, and the
+    status line flags it when the default 4 mm ball doesn't fit (e.g. a 2 mm plate).
   - **Updates when a value is committed**, not per keystroke: number fields have keyboard
     tracking off, so status and preview refresh when the user leaves the field (click
     out / Tab) or clicks a spin arrow. Enter presses the panel's OK, as in every FreeCAD

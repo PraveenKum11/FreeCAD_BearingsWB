@@ -324,6 +324,9 @@ def test_printable():
     check(v["NumBalls"] == PB.max_balls(5, 16, 4, PB.CAGE_DEFAULTS["PocketClearance"]) and v["NumBalls"] < 10,
           "fit_values lowers the ball count to what fits (625: %d)" % v["NumBalls"])
     check(PB.catalog_match({"ID": 8, "OD": 22, "Height": 7}) == "608", "catalog_match 608")
+    check(PB.other_diameter(30, True) == 45, "other diameter: ID 30 -> OD 45")
+    check(PB.other_diameter(22, False) == 7, "other diameter: OD 22 -> ID 7")
+    check(PB.other_diameter(10, False) == 5, "other diameter: OD 10 -> ID 5 (half, no negative bore)")
     check(PB.catalog_match({"ID": 8, "OD": 16, "Height": 5}) == "688", "catalog_match shielded width (688ZZ)")
     pv = dict(PB.CAGE_DEFAULTS, ID=8, OD=22, Height=7, BallDiameter=4, NumBalls=7)
     shapes = PB.preview_shapes(pv)

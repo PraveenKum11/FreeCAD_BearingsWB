@@ -240,7 +240,7 @@ class TaskPanel:
 
         d = self.edge_dia or 20.0
         self.id_ = spin(d)
-        self.od = spin(round(d * 1.6, 2))
+        self.od = spin(PB.other_diameter(d, True))
         self.height = spin(round(d * 0.4, 2), prefix="")
         row(form, "Inner diameter:", self.id_, PB.BEARING_DOCS["ID"])
         row(form, "Outer diameter:", self.od, PB.BEARING_DOCS["OD"])
@@ -465,12 +465,11 @@ class TaskPanel:
             # The selected edge fixes one diameter
             locked.setValue(self.edge_dia)
             locked.setEnabled(False)
-            if mode_changed and groove and m["other"]:
-                other.setValue(m["other"])
-            elif inner and self.od.value() <= self.edge_dia:
-                self.od.setValue(round(self.edge_dia * 1.6, 2))
-            elif not inner and self.id_.value() >= self.edge_dia:
-                self.id_.setValue(round(self.edge_dia / 1.6, 2))
+            # The other diameter starts 15 mm away (both modes); afterwards it is only
+            # reset when it ends up on the wrong side of the locked one
+            if mode_changed or (inner and self.od.value() <= self.edge_dia) \
+                    or (not inner and self.id_.value() >= self.edge_dia):
+                other.setValue(PB.other_diameter(self.edge_dia, inner))
         elif self.bearing is None:
             locked.setEnabled(True)
 
