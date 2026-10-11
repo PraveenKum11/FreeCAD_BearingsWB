@@ -253,7 +253,9 @@ bought balls.
     `preview_frame` exactly where the builders put the bearing. It is a scene-graph
     overlay only, never added to the document or undo history, and is removed however the
     panel closes. "Show preview" turns it off.
-  - **`PrintableBearing` check object** in the Part: validates every later edit of
+  - **`PrintableBearing` check object** in the Part ("Create races" and replace only;
+    groove mode adds none since 2026-10-11, because there is no bearing Part to name, and
+    the user found it a confusing extra object in their own body's tree): validates every later edit of
     `BearingParameters` (e.g. too many balls marks it invalid with the reason) and keeps
     the Part label in step with the size ("Bearing 608 (22x8x7)", "Bearing 22x8x8") until
     the user renames it. The geometry doesn't depend on it, so a document opened without

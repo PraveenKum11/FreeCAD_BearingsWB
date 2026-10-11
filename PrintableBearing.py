@@ -628,7 +628,6 @@ def groove_body(feature, edge, values, cage=True, balls=False):
         feats.append(make_cage(doc, body, params).Tip)
     if balls:
         feats.append(make_balls(doc, body, params).Tip)
-    add_check(doc, params, None, cage, balls)
     check(doc, *feats)
     return params
 
@@ -781,13 +780,15 @@ def convert_bearing(bearing, cage=True, balls=False, values=None):
 
 
 def add_check(doc, params, part, cage, balls):
-    """PrintableBearing object next to the races: validates edits, names the Part."""
-    races = params.getParentGeoFeatureGroup()
+    """PrintableBearing object in the bearing's Part: keeps the Part label in step with
+    the size and validates later edits of BearingParameters.
+
+    Only for "Create races". Grooving a selected body adds none: there is no bearing
+    Part to name, and the user's own body and containers are left alone.
+    """
     obj = doc.addObject("App::FeaturePython", "PrintableBearing")
-    container = part or races.getParentGeoFeatureGroup()
-    if container:
-        container.addObject(obj)
-    PrintableBearingCheck(obj, params, part is not None, cage, balls)
+    part.addObject(obj)
+    PrintableBearingCheck(obj, params, True, cage, balls)
     if App.GuiUp:
         ViewProviderPrintableBearing(obj.ViewObject)
     return obj

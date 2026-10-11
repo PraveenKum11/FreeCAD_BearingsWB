@@ -396,6 +396,8 @@ def test_printable():
         PB.groove_body(bore, edge, dict(PB.CAGE_DEFAULTS, ID=0, OD=24, Height=8, BallDiameter=4,
                                         NumBalls=10), True, False)
         check(len(body.Shape.Solids) == 2, "grooved body splits into 2 races")
+        checks = [o for o in doc.Objects if o.Name.startswith("PrintableBearing")]
+        check(len(checks) == 2, "groove adds no PrintableBearing object (%d total, 2 from create/convert)" % len(checks))
 
         # preview frame matches what the builders produce
         e_hole = find_circle(body, 5, 8)

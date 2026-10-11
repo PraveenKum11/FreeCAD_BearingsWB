@@ -33,8 +33,9 @@ own. It is the DeepGrooveBallBearing macro, now part of the workbench.
 - A live **preview** shows the inner and outer diameter as labelled rings and a
   see-through view of the races, balls and cage while you edit, including when grooving
   an existing body.
-- Edit it later on the **BearingParameters** datum. The **PrintableBearing** object
-  reports invalid values and keeps the Part's label in step with the size.
+- Edit it later on the **BearingParameters** datum. For new races, the
+  **PrintableBearing** object in the bearing's Part keeps the Part's label in step with
+  the size and reports invalid values. Grooving an existing body adds no such object.
 
 ## Find bearing (v0.2)
 
