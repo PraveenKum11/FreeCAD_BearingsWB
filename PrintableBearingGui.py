@@ -241,7 +241,7 @@ class TaskPanel:
         d = self.edge_dia or 20.0
         self.id_ = spin(d)
         self.od = spin(PB.other_diameter(d, True))
-        self.height = spin(round(d * 0.4, 2), prefix="")
+        self.height = spin(PB.DEFAULT_HEIGHT, prefix="")
         row(form, "Inner diameter:", self.id_, PB.BEARING_DOCS["ID"])
         row(form, "Outer diameter:", self.od, PB.BEARING_DOCS["OD"])
         row(form, "Height:", self.height, PB.BEARING_DOCS["Height"])
@@ -449,6 +449,8 @@ class TaskPanel:
             self.edge_is.blockSignals(False)
             if groove:
                 self.height.setValue(m["height"])
+            elif self.bearing is None:
+                self.height.setValue(PB.DEFAULT_HEIGHT)
 
         # Grooving the body: which diameter the edge is was detected
         self.edge_is.setEnabled(not groove)

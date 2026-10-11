@@ -273,6 +273,9 @@ bought balls.
     nearest outer cylinder for it (that gave e.g. OD 80 for a 30 mm bore in a large
     plate). The height is still the length of the selected bore or surface, and the
     status line flags it when the default 4 mm ball doesn't fit (e.g. a 2 mm plate).
+  - **Default height 8 mm** for new races, with or without a selected edge (was
+    0.4 × diameter). Groove mode keeps the selected bore's length; replacing a standard
+    bearing keeps its width.
   - **Updates when a value is committed**, not per keystroke: number fields have keyboard
     tracking off, so status and preview refresh when the user leaves the field (click
     out / Tab) or clicks a spin arrow. Enter presses the panel's OK, as in every FreeCAD

@@ -76,6 +76,7 @@ BEARING_DOCS = {
 }
 DEFAULT_NUM_BALLS = 10
 DEFAULT_BALL_DIAMETER = 4.0
+DEFAULT_HEIGHT = 8.0  # new races; grooving keeps the selected bore's length
 OTHER_DIAMETER_OFFSET = 15.0  # starting OD = selected ID + 15 mm (or ID = selected OD - 15)
 CAGE_DEFAULTS = {
     "CageThickness": 1.5,
