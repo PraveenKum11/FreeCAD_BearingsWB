@@ -219,6 +219,9 @@ class TaskPanel:
             s.setPrefix(prefix)
             s.setSuffix(" mm")
             s.setValue(value)
+            # report a typed value only on Enter / leaving the field (arrows step at once),
+            # so nothing recomputes on every keystroke
+            s.setKeyboardTracking(False)
             return s
 
         self.mode = QtGui.QComboBox()
@@ -257,6 +260,7 @@ class TaskPanel:
         self.num_balls = QtGui.QSpinBox()
         self.num_balls.setRange(1, 1000)
         self.num_balls.setValue(PB.DEFAULT_NUM_BALLS)
+        self.num_balls.setKeyboardTracking(False)
         row(form, "Number of balls:", self.num_balls, PB.BEARING_DOCS["NumBalls"])
 
         # Cage options (checkable group = "create cage")
@@ -281,6 +285,12 @@ class TaskPanel:
         self.show_preview = QtGui.QCheckBox("Show preview")
         self.show_preview.setChecked(True)
         row(form, "", self.show_preview, PB.UI_HELP["Preview"])
+        # what is wrong with the current values, if anything (OK refuses them too)
+        self.status = QtGui.QLabel()
+        self.status.setWordWrap(True)
+        self.status.setStyleSheet("color: #d03030;")
+        form.addRow(self.status)
+
         Preview.clear_stale()
         self.preview = Preview()
         # however the panel goes away (OK, Cancel, another task replacing it, document
@@ -289,16 +299,14 @@ class TaskPanel:
         self._preview_timer = QtCore.QTimer()
         self._preview_timer.setSingleShot(True)
         self._preview_timer.setInterval(120)  # coalesce bursts of edits (spin box arrows)
-        self._preview_timer.timeout.connect(self.update_preview)
+        self._preview_timer.timeout.connect(self.values_changed)
 
         self.mode.currentIndexChanged.connect(self.refresh)
         self.edge_is.currentIndexChanged.connect(self.refresh)
         for s in (self.id_, self.od, self.height):
-            s.editingFinished.connect(self.fit_sizes)
-            s.editingFinished.connect(self.sync_size)
+            s.valueChanged.connect(self.sync_size)
         self.size.currentIndexChanged.connect(self.apply_size)
         self.ball_preset.currentIndexChanged.connect(self.apply_ball_preset)
-        self.ball.valueChanged.connect(self.limit_cage)
         self.ball.valueChanged.connect(self.sync_ball_preset)
 
         for w in (self.id_, self.od, self.height, self.ball, self.cage_t, self.cage_top,
@@ -319,12 +327,28 @@ class TaskPanel:
             for w in (self.id_, self.od, self.height, self.size, self.reverse):
                 w.setEnabled(False)
         self.refresh()
-        self.update_preview()
+        self.values_changed()
 
     # ------------------------------------------------------------ preview
 
     def schedule_preview(self, *_):
         self._preview_timer.start()
+
+    def values_changed(self):
+        self.update_status()
+        self.update_preview()
+
+    def update_status(self):
+        """Say what is wrong with the values. Ball and cage sizes are never changed for
+        the user: they keep their defaults (or what was typed) until edited."""
+        o = self.options()
+        try:
+            PB.validate(o["values"], o["cage"], o["balls"])
+            self.status.setText("")
+            self.status.setVisible(False)
+        except ValueError as e:
+            self.status.setText(str(e))
+            self.status.setVisible(True)
 
     def update_preview(self):
         if not self.show_preview.isChecked():
@@ -371,7 +395,6 @@ class TaskPanel:
         self.id_.setValue(d)
         self.od.setValue(D)
         self.height.setValue(B)
-        self.fit_sizes()
 
     def apply_preset(self, d, D, B):
         """Start from a given size; a diameter locked by the selected edge is kept."""
@@ -380,7 +403,6 @@ class TaskPanel:
         for w, val in ((self.id_, d), (self.od, D), (self.height, B)):
             if w.isEnabled():
                 w.setValue(val)
-        self.fit_sizes(reset=True)
         self.sync_size()
 
     def sync_size(self, *_):
@@ -400,7 +422,6 @@ class TaskPanel:
         dia = self.ball_preset.itemData(index)
         if dia:
             self.ball.setValue(dia)
-            self.fit_sizes()
 
     def sync_ball_preset(self, *_):
         index = 0
@@ -413,18 +434,6 @@ class TaskPanel:
         self.ball_preset.blockSignals(False)
 
     # ------------------------------------------------------------ macro dialog logic
-
-    def limit_cage(self, *_):
-        """The cage can be at most as thick as the gap between the races (ball Ø / 2)."""
-        import math
-
-        self.cage_t.setMaximum(math.floor(self.ball.value() / 2 * 100) / 100)
-
-    def fit_sizes(self, reset=False):
-        v = PB.fit_values(self.options()["values"], reset)
-        self.ball.setValue(v["BallDiameter"])
-        self.cage_t.setValue(v["CageThickness"])
-        self.num_balls.setValue(v["NumBalls"])
 
     def refresh(self, *_):
         groove = self.mode.currentText() == PB.GROOVE
@@ -465,8 +474,6 @@ class TaskPanel:
         elif self.bearing is None:
             locked.setEnabled(True)
 
-        # A new mode starts from fresh sizes; otherwise only fix what no longer fits
-        self.fit_sizes(reset=mode_changed)
         self.fill_sizes()
 
     def options(self):
@@ -543,8 +550,8 @@ def build(opts, edge, measured, bearing):
         QtGui.QMessageBox.warning(Gui.getMainWindow(), TITLE, str(e))
         return False
     doc.commitTransaction()
-    if Gui.ActiveDocument:
-        Gui.SendMsgToActiveView("ViewFit")
+    if Gui.ActiveDocument and Gui.ActiveDocument.ActiveView:
+        Gui.ActiveDocument.ActiveView.fitAll()  # the macro's SendMsgToActiveView("ViewFit") is gone in 1.1
     if not split:
         msg = (
             "The groove did not split the body into separate inner and outer races. "

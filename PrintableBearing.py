@@ -70,7 +70,7 @@ BEARING_DOCS = {
     "BallDiameter": "Diameter of the balls. The balls run on the pitch diameter, midway between "
     "ID and OD, and the gap between the two races is half the ball diameter. "
     "Must be smaller than the ring wall, (OD - ID) / 2, and than the height. "
-    "Default 4 mm (smaller when that doesn't fit the bearing).",
+    "Default 4 mm; it is not changed for you when the sizes change.",
     "NumBalls": "How many balls (and cage pockets) are spaced evenly around the bearing. "
     "The maximum depends on the ball size and the pitch diameter.",
 }

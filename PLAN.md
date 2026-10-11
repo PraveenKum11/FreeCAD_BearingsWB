@@ -195,7 +195,9 @@ GUI checks (dev only, git-ignored in `tools/dev/`): `tools/dev/run_gui.sh
 tools/dev/gui_smoke.py <log>` drives the panels in the real FreeCAD GUI. Scripts end with
 `guikit.finish()`, which closes documents without saving and exits the process, so the
 "save changes?" dialog can't block an unattended run. The runner also kills that FreeCAD
-process if it outlives the script or a timeout.
+process if it outlives the script or a timeout. `guikit` also closes any dialog that
+appears (message boxes, including macOS window-modal sheets that `activeModalWidget()`
+doesn't report) and logs its text, so an unexpected warning can't hang a run.
 
 Don't name test scripts `inspect.py`. It shadows the stdlib module and freecadcmd silently
 prints nothing.
@@ -257,10 +259,24 @@ bought balls.
     the user renames it. The geometry doesn't depend on it, so a document opened without
     the workbench still recomputes. It finds its Part through the tree; a link to the
     Part would form a dependency cycle.
-  - `fit_values()`: the macro dialog's sizing logic as a plain function, used by the
-    panel, conversion and catalog prefill. Changed from the macro: when 4 mm balls don't
-    fit, the fallback snaps to the largest **standard (buyable) ball** instead of an
-    arbitrary size like 2.67 mm.
+  - **No automatic ball/cage sizing in the panel** (user decision, 2026-10-11): ball
+    diameter, number of balls and the cage values start at the macro's defaults (4 mm,
+    10 balls, cage 1.5 / 0.5 / 0.35 / 0.6). They change only when the user edits them,
+    not on ID/OD/height edits, mode switches or catalog picks. The macro dialog adapted
+    them and also clamped the cage thickness to half the ball, which confused users who
+    don't know good sizes. Instead, a **status line** under the fields says what doesn't
+    fit (e.g. "Number of balls must be between 1 and 9"), and OK refuses invalid values
+    with a warning as before.
+  - **Updates when a value is committed**, not per keystroke: number fields have keyboard
+    tracking off, so status and preview refresh when the user leaves the field (click
+    out / Tab) or clicks a spin arrow. Enter presses the panel's OK, as in every FreeCAD
+    task panel.
+  - `fit_values()` (the macro dialog's sizing logic as a plain function) remains only for
+    scripting: `convert_bearing()` without explicit values. When 4 mm balls don't fit, its
+    fallback snaps to the largest **standard (buyable) ball**.
+  - The macro's `SendMsgToActiveView("ViewFit")` doesn't exist in FreeCAD 1.1 ("Unknown
+    view command"). It is replaced by `ActiveView.fitAll()`. The macro itself has the same
+    line.
 - [x] **Find bearing** (`BearingSearchGui.py`, command `Bearings_Search`; logic in
   `BearingData.search()` / `parse_designation()`): search by **name, ID, OD or height**,
   in any combination, with a ± tolerance.
