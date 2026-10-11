@@ -191,6 +191,12 @@ Face colors (steel rings and balls, brass cage, grey shields, black seals) are c
    Placement puts z = 0 on the face and the body inside the hole or on the shaft.
 5. Save, reopen and recompute (proxy serialization).
 
+GUI checks (dev only, git-ignored in `tools/dev/`): `tools/dev/run_gui.sh
+tools/dev/gui_smoke.py <log>` drives the panels in the real FreeCAD GUI. Scripts end with
+`guikit.finish()`, which closes documents without saving and exits the process, so the
+"save changes?" dialog can't block an unattended run. The runner also kills that FreeCAD
+process if it outlives the script or a timeout.
+
 Don't name test scripts `inspect.py`. It shadows the stdlib module and freecadcmd silently
 prints nothing.
 
@@ -238,6 +244,13 @@ bought balls.
   - **Direction preset**: *Reverse direction* is pre-ticked so the races go into the hole
     or onto the shaft (the macro's default depended on the arbitrary sign of the circle
     axis).
+  - **Live preview** in the 3D view while the panel is open (all modes, including groove):
+    the ID and OD as labelled rings on both faces, drawn on top so they show through the
+    part, and a see-through ghost of races (with the groove), balls and cage. It is built
+    from plain Part profiles (`preview_shapes`, about 2 ms, no booleans) and placed by
+    `preview_frame` exactly where the builders put the bearing. It is a scene-graph
+    overlay only, never added to the document or undo history, and is removed however the
+    panel closes. "Show preview" turns it off.
   - **`PrintableBearing` check object** in the Part: validates every later edit of
     `BearingParameters` (e.g. too many balls marks it invalid with the reason) and keeps
     the Part label in step with the size ("Bearing 608 (22x8x7)", "Bearing 22x8x8") until

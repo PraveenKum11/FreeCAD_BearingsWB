@@ -3,7 +3,7 @@
 
 import FreeCAD as App
 import FreeCADGui as Gui
-from PySide import QtGui
+from PySide import QtCore, QtGui
 
 import BRselection as BRS
 import PrintableBearing as PB
@@ -37,6 +37,148 @@ def get_selection():
     if edge is None:
         raise ValueError("The selected edge is not circular.")
     return BRS.owner_object(top, subname), edge, shape
+
+
+# preview colors, as in the macro's README images: races blue, cage orange, balls red
+PREVIEW_COLORS = {
+    "inner race": (0.35, 0.55, 0.85),
+    "outer race": (0.35, 0.55, 0.85),
+    "ball": (0.85, 0.2, 0.2),
+    "cage": (0.95, 0.55, 0.1),
+}
+RING_COLORS = {"ID": (0.1, 0.75, 0.25), "OD": (0.9, 0.2, 0.75)}
+
+
+class Preview:
+    """Temporary scene-graph overlay in the active 3D view; never added to the document.
+
+    Shows the ID and OD as labelled rings on both faces (drawn on top, so they are
+    visible through the part) and a translucent ghost of races, balls and cage.
+    """
+
+    active = None  # the preview currently on screen, so a stale one can always be removed
+
+    def __init__(self):
+        from pivy import coin
+
+        self.coin = coin
+        self.view = Gui.ActiveDocument.ActiveView if Gui.ActiveDocument else None
+        self.root = None
+
+    @classmethod
+    def clear_stale(cls):
+        if cls.active is not None:
+            cls.active.clear()
+
+    def clear(self, *_):
+        if self.root is not None and self.view is not None:
+            try:
+                self.view.getSceneGraph().removeChild(self.root)
+            except Exception:
+                pass  # the view may already be gone (document closed)
+        self.root = None
+        if Preview.active is self:
+            Preview.active = None
+
+    def show(self, placement, values, cage=True):
+        self.clear()
+        if self.view is None:
+            return
+        coin = self.coin
+        root = coin.SoSeparator()
+        xf = coin.SoTransform()
+        xf.translation.setValue(*placement.Base)
+        q = placement.Rotation.Q
+        xf.rotation.setValue(coin.SbRotation(q[0], q[1], q[2], q[3]))
+        root.addChild(xf)
+
+        ghost = coin.SoSeparator()
+        hints = coin.SoShapeHints()
+        hints.vertexOrdering = coin.SoShapeHints.COUNTERCLOCKWISE
+        hints.creaseAngle = 0.6
+        ghost.addChild(hints)
+        tol = max(0.01, values["OD"] / 300)
+        for role, shape in PB.preview_shapes(values, cage):
+            ghost.addChild(self._mesh(shape, PREVIEW_COLORS[role], tol))
+        root.addChild(ghost)
+
+        rings = coin.SoAnnotation()  # drawn on top of everything
+        style = coin.SoDrawStyle()
+        style.lineWidth = 3
+        rings.addChild(style)
+        h = values["Height"] / 2
+        for key in ("ID", "OD"):
+            r = values[key] / 2
+            if r <= 0:
+                continue
+            for z in (-h, h):
+                rings.addChild(self._ring(r, z, RING_COLORS[key]))
+            rings.addChild(self._label("%s Ø%.2f" % (key, values[key]), r, h, RING_COLORS[key], key == "ID"))
+        root.addChild(rings)
+
+        self.view.getSceneGraph().addChild(root)
+        self.root = root
+        Preview.active = self
+
+    def _mesh(self, shape, rgb, tol):
+        coin = self.coin
+        points, triangles = shape.tessellate(tol)
+        sep = coin.SoSeparator()
+        mat = coin.SoMaterial()
+        mat.diffuseColor.setValue(*rgb)
+        mat.transparency.setValue(0.55)
+        sep.addChild(mat)
+        coords = coin.SoCoordinate3()
+        coords.point.setValues(0, len(points), [(p.x, p.y, p.z) for p in points])
+        sep.addChild(coords)
+        faces = coin.SoIndexedFaceSet()
+        index = []
+        for a, b, c in triangles:
+            index.extend((a, b, c, -1))
+        faces.coordIndex.setValues(0, len(index), index)
+        sep.addChild(faces)
+        return sep
+
+    def _ring(self, r, z, rgb, segments=96):
+        import math
+
+        coin = self.coin
+        sep = coin.SoSeparator()
+        mat = coin.SoBaseColor()
+        mat.rgb.setValue(*rgb)
+        sep.addChild(mat)
+        pts = [(r * math.cos(2 * math.pi * i / segments), r * math.sin(2 * math.pi * i / segments), z)
+               for i in range(segments + 1)]
+        coords = coin.SoCoordinate3()
+        coords.point.setValues(0, len(pts), pts)
+        sep.addChild(coords)
+        line = coin.SoLineSet()
+        line.numVertices.setValue(len(pts))
+        sep.addChild(line)
+        return sep
+
+    def _label(self, text, r, h, rgb, inner):
+        import math
+
+        coin = self.coin
+        sep = coin.SoSeparator()
+        color = coin.SoBaseColor()
+        color.rgb.setValue(*rgb)
+        sep.addChild(color)
+        # ID label on one side, OD label on the opposite side, both on the top face and
+        # just outside their ring so the text doesn't sit on the line
+        a = math.radians(150 if inner else -30)
+        rr = r * 1.06 + 0.5
+        pos = coin.SoTranslation()
+        pos.translation.setValue(rr * math.cos(a), rr * math.sin(a), h)
+        sep.addChild(pos)
+        font = coin.SoFont()
+        font.size = 20
+        sep.addChild(font)
+        txt = coin.SoText2()
+        txt.string = text
+        sep.addChild(txt)
+        return sep
 
 
 class TaskPanel:
@@ -136,6 +278,19 @@ class TaskPanel:
         self.balls.setChecked(False)
         row(form, "Balls:", self.balls, PB.UI_HELP["Balls"])
 
+        self.show_preview = QtGui.QCheckBox("Show preview")
+        self.show_preview.setChecked(True)
+        row(form, "", self.show_preview, PB.UI_HELP["Preview"])
+        Preview.clear_stale()
+        self.preview = Preview()
+        # however the panel goes away (OK, Cancel, another task replacing it, document
+        # closed), its preview goes with it
+        self.form.destroyed.connect(self.preview.clear)
+        self._preview_timer = QtCore.QTimer()
+        self._preview_timer.setSingleShot(True)
+        self._preview_timer.setInterval(120)  # coalesce bursts of edits (spin box arrows)
+        self._preview_timer.timeout.connect(self.update_preview)
+
         self.mode.currentIndexChanged.connect(self.refresh)
         self.edge_is.currentIndexChanged.connect(self.refresh)
         for s in (self.id_, self.od, self.height):
@@ -146,6 +301,16 @@ class TaskPanel:
         self.ball.valueChanged.connect(self.limit_cage)
         self.ball.valueChanged.connect(self.sync_ball_preset)
 
+        for w in (self.id_, self.od, self.height, self.ball, self.cage_t, self.cage_top,
+                  self.pocket_clr, self.pocket_rise):
+            w.valueChanged.connect(self.schedule_preview)
+        self.num_balls.valueChanged.connect(self.schedule_preview)
+        for w in (self.mode, self.edge_is):
+            w.currentIndexChanged.connect(self.schedule_preview)
+        for w in (self.reverse, self.show_preview):
+            w.toggled.connect(self.schedule_preview)
+        self.cage.toggled.connect(self.schedule_preview)
+
         if bearing is not None:
             # Replace a standard bearing: its size is fixed, it sits where the bearing was
             self.id_.setValue(bearing.BoreDiameter.Value)
@@ -154,6 +319,25 @@ class TaskPanel:
             for w in (self.id_, self.od, self.height, self.size, self.reverse):
                 w.setEnabled(False)
         self.refresh()
+        self.update_preview()
+
+    # ------------------------------------------------------------ preview
+
+    def schedule_preview(self, *_):
+        self._preview_timer.start()
+
+    def update_preview(self):
+        if not self.show_preview.isChecked():
+            self.preview.clear()
+            return
+        o = self.options()
+        frame = PB.preview_frame(o["mode"], self.edge, self.measured, o["values"]["Height"],
+                                 o["reverse"], self.bearing)
+        try:
+            self.preview.show(frame, o["values"], o["cage"])
+        except Exception as e:  # a preview problem must never block the panel
+            App.Console.PrintLog("Printable bearing preview: %s\n" % e)
+            self.preview.clear()
 
     # ------------------------------------------------------------ catalog size / presets
 
@@ -318,12 +502,17 @@ class TaskPanel:
         except ValueError as e:
             QtGui.QMessageBox.warning(self.form, TITLE, str(e))
             return False
+        self._preview_timer.stop()
+        self.preview.clear()
         if build(o, self.edge, self.measured, self.bearing):
             Gui.Control.closeDialog()
             return True
+        self.update_preview()
         return False
 
     def reject(self):
+        self._preview_timer.stop()
+        self.preview.clear()
         Gui.Control.closeDialog()
         return True
 

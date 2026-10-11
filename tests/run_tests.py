@@ -325,6 +325,21 @@ def test_printable():
           "fit_values lowers the ball count to what fits (625: %d)" % v["NumBalls"])
     check(PB.catalog_match({"ID": 8, "OD": 22, "Height": 7}) == "608", "catalog_match 608")
     check(PB.catalog_match({"ID": 8, "OD": 16, "Height": 5}) == "688", "catalog_match shielded width (688ZZ)")
+    pv = dict(PB.CAGE_DEFAULTS, ID=8, OD=22, Height=7, BallDiameter=4, NumBalls=7)
+    shapes = PB.preview_shapes(pv)
+    roles = [r for r, _ in shapes]
+    check(roles.count("ball") == 7 and "inner race" in roles and "outer race" in roles and "cage" in roles,
+          "preview roles: %s" % roles)
+    check(all(sh.isValid() for _, sh in shapes), "preview shapes valid")
+    outer = dict(shapes)["outer race"]
+    obb = outer.optimalBoundingBox(False, False)
+    check(close(obb.XLength, 22, 0.01) and close(obb.ZMin, -3.5, 0.01) and close(obb.ZMax, 3.5, 0.01),
+          "preview outer race spans OD and height around mid-height")
+    balls = [sh for r, sh in shapes if r == "ball"]
+    check(max(dict(shapes)[k].common(b).Volume for k in ("inner race", "outer race") for b in balls) < 1e-6,
+          "preview balls don't overlap races")
+    check(PB.preview_shapes(dict(pv, BallDiameter=20)) == [], "preview of impossible values is empty")
+    check("cage" not in [r for r, _ in PB.preview_shapes(pv, cage=False)], "preview without cage")
     small = PB.fit_values(dict(PB.CAGE_DEFAULTS, ID=8, OD=16, Height=5, BallDiameter=4, NumBalls=10), reset=True)
     check(small["BallDiameter"] in BG.STANDARD_BALLS, "fallback ball is a standard size: %g" % small["BallDiameter"])
 
@@ -377,6 +392,16 @@ def test_printable():
         PB.groove_body(bore, edge, dict(PB.CAGE_DEFAULTS, ID=0, OD=24, Height=8, BallDiameter=4,
                                         NumBalls=10), True, False)
         check(len(body.Shape.Solids) == 2, "grooved body splits into 2 races")
+
+        # preview frame matches what the builders produce
+        e_hole = find_circle(body, 5, 8)
+        m = PB.measure_body(body, body.Shape.getElement(e_hole))
+        fr = PB.preview_frame(PB.GROOVE, body.Shape.getElement(e_hole), m, 8)
+        check(close(fr.Base.z, 4, 1e-6), "groove preview frame at mid-height of the bore: %s" % fr.Base)
+        fr = PB.preview_frame(PB.CREATE, None, None, 7, reverse=True)
+        check(close(fr.Base.z, -3.5, 1e-6), "create preview frame, reversed: %s" % fr.Base)
+        fr = PB.preview_frame(PB.CREATE, None, None, 5, bearing=std)
+        check((fr.Base - V(60, 0, -2.5)).Length < 1e-6, "convert preview frame: %s" % fr.Base)
 
         name = part.Name
         path = os.path.join(tempfile.mkdtemp(), "printable.FCStd")

@@ -30,6 +30,9 @@ own. It is the DeepGrooveBallBearing macro, now part of the workbench.
   bearing to replace, or nothing.
 - Pick a catalog size (608, 625 …) or enter ID/OD/height, and pick a ball preset
   (4.5 mm BB, 6 mm airsoft …).
+- A live **preview** shows the inner and outer diameter as labelled rings and a
+  see-through view of the races, balls and cage while you edit, including when grooving
+  an existing body.
 - Edit it later on the **BearingParameters** datum. The **PrintableBearing** object
   reports invalid values and keeps the Part's label in step with the size.
 

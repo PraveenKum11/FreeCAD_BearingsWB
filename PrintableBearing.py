@@ -119,6 +119,9 @@ UI_HELP = {
     "Size": "Prefill the inner diameter, outer diameter and height from a catalog bearing "
     "(608, 6204, MR105, ...). With a selected edge, only sizes matching its diameter are "
     "listed. Custom: enter the sizes yourself.",
+    "Preview": "Show the bearing in the 3D view while editing: the inner and outer diameter "
+    "as labelled rings on both faces, and a see-through view of the races, balls and cage. "
+    "It is only a preview; nothing is added to the document until OK.",
     "BallPreset": "Common balls to buy for printed bearings. Sets the ball diameter; "
     "airsoft BBs are nominally 6 mm but measure 5.95 mm.",
 }
@@ -686,6 +689,66 @@ def create_races(doc, placement, values, reverse=False, cage=True, balls=False):
     add_check(doc, params, part, cage, balls)
     check(doc, *feats)
     return params
+
+
+# ---------------------------------------------------------------- preview
+
+
+def preview_shapes(v, cage=True):
+    """Light Part shapes of the bearing, in the bearing frame (origin on the axis at
+    mid-height, Z = axis), for the task panel preview: [(role, shape), ...].
+
+    Same profile as draw_race_profile() and the same cage height as make_cage(), but
+    revolved directly from 2D profiles (no booleans, no cage pockets) so it is fast
+    enough to rebuild on every edit. Returns [] when the values can't be drawn.
+    """
+    from BearingGeometry import _revolve
+
+    id_, od, height, ball = v["ID"], v["OD"], v["Height"], v["BallDiameter"]
+    if not (0 < id_ < od and height > 0 and 0 < ball < min((od - id_) / 2, height)):
+        return []
+    rp = (id_ + od) / 4  # pitch radius (ball center)
+    rb = ball / 2  # ball radius
+    w = ball / 4  # half slot width (slot = ball diameter / 2)
+    h = height / 2
+    yi = rb * SIN60  # where the slot walls meet the ball circle
+    shapes = []
+    try:
+        shapes.append(("inner race", _revolve([
+            ("p", id_ / 2, -h, 0), ("p", rp - w, -h, 0), ("p", rp - w, -yi, 0),
+            ("a", rp - rb, 0), ("p", rp - w, yi, 0), ("p", rp - w, h, 0), ("p", id_ / 2, h, 0)])))
+        shapes.append(("outer race", _revolve([
+            ("p", rp + w, -h, 0), ("p", od / 2, -h, 0), ("p", od / 2, h, 0), ("p", rp + w, h, 0),
+            ("p", rp + w, yi, 0), ("a", rp + rb, 0), ("p", rp + w, -yi, 0)])))
+        n = max(1, int(v.get("NumBalls", DEFAULT_NUM_BALLS)))
+        sphere = Part.makeSphere(rb, App.Vector(rp, 0, 0))
+        for k in range(n):
+            s = sphere.copy()
+            s.rotate(App.Vector(), App.Vector(0, 0, 1), 360.0 * k / n)
+            shapes.append(("ball", s))
+        if cage and 0 < v["CageThickness"] <= rb + 1e-9:
+            t = v["CageThickness"]
+            design_top = ball * SIN60 / 2 - v["CageTopOffset"]
+            top = (ball + v["PocketClearance"]) / 2 - v["PocketRise"]
+            bottom = -h + (top - design_top)
+            if top > bottom:
+                shapes.append(("cage", _revolve([
+                    ("p", rp - t / 2, bottom, 0), ("p", rp + t / 2, bottom, 0),
+                    ("p", rp + t / 2, top, 0), ("p", rp - t / 2, top, 0)])))
+    except Part.OCCError:
+        return []
+    return shapes
+
+
+def preview_frame(mode, edge, measured, height, reverse=False, bearing=None):
+    """Global placement of the bearing frame (origin on the axis at mid-height) that
+    groove_body() / create_races() / convert_bearing() would use."""
+    if bearing is not None:  # the standard bearing occupies z in [-B, 0]
+        return global_placement(bearing).multiply(App.Placement(App.Vector(0, 0, -height / 2), App.Rotation()))
+    if mode == GROOVE:
+        return frame_placement(edge, measured["mid"])
+    face = frame_placement(edge) if edge is not None else App.Placement()
+    return face.multiply(App.Placement(App.Vector(0, 0, (-0.5 if reverse else 0.5) * height), App.Rotation()))
 
 
 def convert_bearing(bearing, cage=True, balls=False, values=None):
