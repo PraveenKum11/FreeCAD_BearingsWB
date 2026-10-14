@@ -258,6 +258,9 @@ The runner also kills that FreeCAD process if it outlives the script or a timeou
 `guikit` also closes any dialog that appears (message boxes, including macOS window-modal
 sheets that `activeModalWidget()` doesn't report) and logs its text, so an unexpected
 warning can't hang a run.
+`QMessageBox.warning()` & co. are replaced by stubs in GUI runs (`guikit`): on macOS Qt
+shows them as native alerts the guard can't see, so a run used to wait for a click. The
+stubs log the text, record it in `guikit.dialogs` (tests check it) and return OK.
 
 Don't name test scripts `inspect.py`. It shadows the stdlib module and freecadcmd silently
 prints nothing.

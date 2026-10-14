@@ -23,7 +23,7 @@ import traceback
 
 LOG = os.environ.get("GUIKIT_LOG") or os.path.join(tempfile.gettempdir(), "guikit.log")
 _f = open(LOG, "w")
-dialogs = []  # texts of modal dialogs closed by the guard
+dialogs = []  # texts of message boxes answered and modal dialogs closed by the guard
 
 
 def _close_modals():
@@ -56,7 +56,35 @@ def install_modal_guard(interval_ms=300):
     _guard.start(interval_ms)
 
 
+def install_message_box_stubs():
+    """Answer QMessageBox.warning() & co. without showing anything.
+
+    On macOS, Qt shows these static message boxes as native alerts, which aren't Qt
+    widgets: the modal guard can't find or close them, and a run waits for a click. In
+    test runs they log their text, record it in `dialogs` and return at once (OK, or the
+    given default button). Other dialogs are kept non-native so the guard can close them.
+    """
+    from PySide import QtCore, QtGui
+
+    QtGui.QApplication.setAttribute(QtCore.Qt.AA_DontUseNativeDialogs, True)
+    box = QtGui.QMessageBox
+
+    def stub(kind, default):
+        def answer(parent, title, text, buttons=None, default_button=None, *args, **kwargs):
+            dialogs.append(text)
+            log("[guard] %s message box: %s" % (kind, str(text).replace("\n", " ")[:200]))
+            return default_button or default
+
+        return staticmethod(answer)
+
+    box.warning = stub("warning", box.Ok)
+    box.critical = stub("critical", box.Ok)
+    box.information = stub("information", box.Ok)
+    box.question = stub("question", box.Yes)
+
+
 try:
+    install_message_box_stubs()
     install_modal_guard()
 except Exception:  # not in a GUI session
     pass

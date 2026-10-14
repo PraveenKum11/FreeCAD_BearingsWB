@@ -153,20 +153,18 @@ try:
 
     n_dialogs = len(guikit.dialogs)
     expect(p3.accept() is False, "invalid values refused")
-    log(
-        "  dialogs closed by guard during accept:",
-        len(guikit.dialogs) - n_dialogs,
-        "| visible top-level dialogs now:",
-        [
-            type(t).__name__
-            for t in _QG.QApplication.topLevelWidgets()
-            if t.isVisible() and isinstance(t, _QG.QDialog)
-        ],
-        "| timer active:",
-        p3._preview_timer.isActive(),
-        "| panel visible:",
-        p3.form.isVisible(),
+    # the warning is answered by guikit's message box stub: no window, no click needed
+    warned = guikit.dialogs[n_dialogs:]
+    expect(
+        len(warned) == 1 and "Ball diameter" in warned[0],
+        "OK on invalid values warns once: %s" % warned,
     )
+    open_dialogs = [
+        type(t).__name__
+        for t in _QG.QApplication.topLevelWidgets()
+        if t.isVisible() and isinstance(t, _QG.QDialog)
+    ]
+    expect(not open_dialogs and p3.form.isVisible(), "no dialog left open, panel still there")
     p3.ball_preset.setCurrentIndex(
         [i for i in range(p3.ball_preset.count()) if p3.ball_preset.itemText(i).startswith("3 mm")][
             0
