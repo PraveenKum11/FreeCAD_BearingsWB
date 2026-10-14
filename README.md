@@ -285,7 +285,7 @@ no load ratings, speeds or other catalogue data are included.
 | LM linear bushings (`linear_lm.csv`) | The interchangeable "Asian standard" LM dimensions, from [Samick's linear bushing catalog](https://www.findling.com/fileadmin/Inhalt/PDFs/Kataloge/Samick_Linear_Bushing.pdf) (plain, long, LMF, LMK) | [G2k's LM table](https://www.euro-bearings.com/g2klm.htm) (plain) and [Tuli's LMK-LUU sheet](https://www.tuli-shop.com/media/custom/upload/LMK-LUU-Linear-Bearings.pdf) (square flange) |
 
 The details of each check, including the few values where sources disagree and which one
-we use, are in [PLAN.md](PLAN.md) §4.1.
+we use, are in [PLAN.md](PLAN.md) §4.
 
 Shielded widths and flange dimensions of miniature bearings vary by vendor and are
 approximate: check `BRData/*.csv` against your supplier's sheet before relying on them for

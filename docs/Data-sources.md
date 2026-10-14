@@ -18,4 +18,4 @@ No load ratings, speeds or other catalogue data are included.
 
 Miniature shielded widths and flanges vary by vendor: check the CSV
 against your supplier's sheet before relying on it for tight fits. The tables are plain
-CSV, so they are easy to correct. The details of every check are in `PLAN.md` §4.1.
+CSV, so they are easy to correct. The details of every check are in `PLAN.md` §4.

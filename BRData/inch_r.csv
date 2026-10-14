@@ -1,7 +1,7 @@
 # Inch deep groove ball bearings, R series (ABMA), in mm (inch values x 25.4).
 # B_shielded: width of Z/ZZ/RS/2RS variants if different from the open width.
 # D1, C1: flange OD and flange width of the FR variants (shielded flange width).
-# Cross-checked 2026-10-14 against SKF (R144...R12; see PLAN.md 4.1 for the open widths of
+# Cross-checked 2026-10-14 against SKF (R144...R12; see PLAN.md section 4 for the open widths of
 # R6, R8, R10) and a miniature vendor's chart (all rows, FR flanges).
 Designation,d,D,B,r,B_shielded,D1,C1
 R144,3.175,6.35,2.38,0.1,2.779,7.518,0.787
