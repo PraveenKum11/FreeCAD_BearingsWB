@@ -98,13 +98,12 @@ ruff format . && ruff check .
 ## Data accuracy
 
 Boundary dimensions of series 60/62/63/68/69 were cross-checked against SKF's public
-table (`python3 tools/verify_skf.py`, see PLAN.md §4.1). Shielded widths and flange dimensions of miniature bearings vary by vendor and are
-approximate. Check `BRData/*.csv` against your supplier's sheet before relying on them for
+table (see PLAN.md §4.1). Shielded widths and flange dimensions of miniature bearings vary
+by vendor and are approximate. Check `BRData/*.csv` against your supplier's sheet before relying on them for
 tight fits.
 
-The repository holds no manufacturer catalogue data. `tools/verify_skf.py` fetches SKF's
-table each time it runs and doesn't store it. PLAN.md records only the conclusions drawn
-from such checks.
+The repository holds no manufacturer catalogue data or tools to fetch it. PLAN.md records
+only the conclusions of those checks.
 
 ## License
 

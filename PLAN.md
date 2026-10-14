@@ -59,8 +59,7 @@ FreeCAD_BearingsWB/
   tests/test_*.py       headless tests; shared helpers in tests/testutil.py
   tests/gui/            GUI smoke test, its helpers (guikit.py) and runner (run_gui.sh)
   tools/make_icons.py   icon generator
-  tools/verify_skf.py   cross-checks BRData against SKF's public table (fetched, not stored)
-  tools/dev/            git-ignored: SKF scraper, its cache and output (never committed)
+  tools/dev/            git-ignored: SKF cross-check and scraper, cache and output (never committed)
 ```
 
 Layering rule: `BearingGeometry` depends only on `Part` and `FreeCAD.Vector`. `BearingBase`
@@ -87,8 +86,9 @@ Designation,d,D,B,r,B_shielded,D1,C1
 - Values were compiled from public ISO 15 boundary tables and common miniature listings.
   **Miniature shielded widths and flange dimensions are approximate.** Check them against a
   vendor sheet before relying on them for tight fits (tracked in §10).
-- **Verified 2026-10-09 against SKF's public deep groove table** (`tools/verify_skf.py`,
-  4,192 SKF rows, matched by d × D, comparing open and closed widths):
+- **Verified 2026-10-09 against SKF's public deep groove table** (git-ignored
+  `tools/dev/verify_skf.py`, 4,192 SKF rows, matched by d × D, comparing open and closed
+  widths):
   - Series 60, 62, 63, 68 and 69: every row SKF sells matches, including the wider
     shielded widths of 68x/69x miniatures (684ZZ = 4, 688ZZ = 5, 693ZZ = 4, …).
   - MR closed widths all match SKF's equivalent closed bearings. SKF sells most of these
