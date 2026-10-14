@@ -10,7 +10,6 @@ the wiki.
 - `_Sidebar.md` and `_Footer.md` appear on every page.
 - Images: `images/…` (here a link to `../images`, in the wiki a copy of it). Render new
   ones with `tools/render_images.py`.
-- `freecad-wiki.txt` is a draft of the page for wiki.freecad.org (MediaWiki markup).
 
 The first time, enable the wiki (Settings → General → Features → Wikis) and create any
 first page in the browser; the workflow can only push to a wiki that exists.

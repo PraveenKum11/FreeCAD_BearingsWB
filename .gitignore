@@ -6,5 +6,5 @@ __pycache__/
 # dev-only tools and their caches
 tools/dev/
 
-# temporary ignore
-/.github/workflows/wiki.yml
+# draft for wiki.freecad.org, kept locally
+/docs/freecad-wiki.txt

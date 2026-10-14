@@ -1,0 +1,44 @@
+# Publish docs/ (and images/) to the repository's GitHub wiki on every push to main.
+# The wiki must exist first: enable it (Settings > General > Features > Wikis) and create
+# any first page in the browser. The pages here replace the wiki's content.
+name: Publish wiki
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "images/**", ".github/workflows/wiki.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: true
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy docs/ and images/ to the wiki
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki
+          find wiki -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp docs/*.md wiki/
+          rm -f wiki/README.md
+          mkdir -p wiki/images
+          cp -L images/* wiki/images/
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date"
+          else
+            git commit -m "Update wiki from ${GITHUB_SHA::7}"
+            git push
+          fi
