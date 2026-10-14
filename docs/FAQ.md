@@ -16,7 +16,7 @@ Boundary dimensions follow the standards and were cross-checked (see [[Data sour
 internal details are computed, so they are representative, not a maker's drawing.
 
 **Can I print a standard bearing?**
-Use a [[Printable bearings|printable bearing]] of the same size: select the standard one
+Use a [[printable bearing|Printable bearings]] of the same size: select the standard one
 and run 3D-printable bearing to replace it.
 
 **Will documents still open without the workbench?**

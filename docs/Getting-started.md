@@ -6,7 +6,7 @@
 
 - **Bearings**: one drop-down per family. Click the arrow to pick a series; the button
   remembers the last one. The **Bearings** menu lists every series by family.
-- **Bearing tools**: [[Find bearing]], [[Printable bearings|3D-printable bearing]] and
+- **Bearing tools**: [[Find bearing]], [[3D-printable bearing|Printable bearings]] and
   [[Bearing BOM]].
 
 ## Insert a bearing

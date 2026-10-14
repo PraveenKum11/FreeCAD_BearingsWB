@@ -41,6 +41,7 @@ not a copy of one maker's drawing (608: 7 balls of 4 mm; a real 608 has 7 of 3.9
 
 ## Attaching
 
-See [[Getting started#attach-it-to-a-hole-or-a-shaft]]. `MatchTo` decides whether an
-`Auto` designation matches the edge to the bore (Shaft) or the outside (Housing); it is
-set from the geometry when you attach (a hole is Housing, a shaft end Shaft).
+See [[Attach it to a hole or a shaft|Getting started#attach-it-to-a-hole-or-a-shaft]].
+`MatchTo` decides whether an `Auto` designation matches the edge to the bore (Shaft) or
+the outside (Housing); it is set from the geometry when you attach (a hole is Housing, a
+shaft end Shaft).

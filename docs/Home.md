@@ -19,7 +19,7 @@ correctly sized bearing that stays attached to it, or design a fully parametric
 
 ## Quick start
 
-1. [[Installation|Install]] the workbench and pick **Bearings** in the workbench selector.
+1. [[Install|Installation]] the workbench and pick **Bearings** in the workbench selector.
 2. Select the edge of a hole or the end of a shaft.
 3. Pick a series from a drop-down on the **Bearings** toolbar. Done: the bearing is sized
    to the edge and stays attached to it.

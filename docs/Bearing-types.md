@@ -1,6 +1,6 @@
 # Bearing types
 
-Besides [[Standard bearings|deep groove ball bearings]], the workbench has the other
+Besides [[deep groove ball bearings|Standard bearings]], the workbench has the other
 common rolling bearing types. They attach to edges, appear in [[Find bearing]] and the
 [[Bearing BOM]], and follow the same labels.
 

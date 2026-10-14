@@ -15,5 +15,5 @@ when inserting.
 
 - **Insert bearing** adds the selected size (attached to the edges you selected before
   opening the panel, if any). Double-clicking a row does the same.
-- **Printable…** opens the [[Printable bearings|3D-printable bearing]] panel with that
+- **Printable…** opens the [[3D-printable bearing|Printable bearings]] panel with that
   size (ball bearings only).

@@ -6,7 +6,8 @@ in pull requests like the code; on every push to `main`, the `Publish wiki` work
 the wiki.
 
 - One Markdown file per wiki page; the file name is the page name (`Getting-started.md` is
-  "Getting started"). Link pages with `[[Page name]]` or `[text](Page-name)`.
+  "Getting started"). Link pages with `[[Page name]]`, or `[[link text|Page name]]` for
+  other text (text first, page second: the other way round links to a missing page).
 - `_Sidebar.md` and `_Footer.md` appear on every page.
 - Images: `images/…` (here a link to `../images`, in the wiki a copy of it). Render new
   ones with `tools/render_images.py`.
