@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Parametric bearing FeaturePython object, view provider and attachment."""
 
 import re
@@ -6,18 +6,14 @@ import re
 import FreeCAD
 
 import BearingData as BD
-import BRselection as BRS
 import BearingGeometry as BG
-from BRutils import icon, translate
+import BRselection as BRS
+from BRutils import icon
 
 V = FreeCAD.Vector
 GROUP = "Bearing"
 INFO = "Bearing info"
 MATCH_TO = ["Housing", "Shaft"]
-
-
-def _is_circular_edge(sub):
-    return BRS.is_circular_edge(sub)
 
 
 def edge_frame(obj, subname):
@@ -52,33 +48,56 @@ class BearingObject:
         self.auto_label = obj.Label
         self.auto_target = None
 
-        obj.addProperty("App::PropertyEnumeration", "Series", GROUP,
-                        translate("Bearings", "Bearing series"))
+        obj.addProperty("App::PropertyEnumeration", "Series", GROUP, "Bearing series")
         obj.Series = list(BD.SERIES.keys())
         obj.Series = series
-        obj.addProperty("App::PropertyEnumeration", "Designation", GROUP,
-                        translate("Bearings", "Bearing size within the series ('Auto' matches the attached edge)"))
+        obj.addProperty(
+            "App::PropertyEnumeration",
+            "Designation",
+            GROUP,
+            "Bearing size within the series ('Auto' matches the attached edge)",
+        )
         obj.Designation = self._designation_list(series)
         obj.Designation = BD.AUTO if attach_to else BD.SERIES[series][2]
-        obj.addProperty("App::PropertyEnumeration", "Closure", GROUP,
-                        translate("Bearings", "Shields (Z) or rubber seals (RS); single closures sit on the top face"))
+        obj.addProperty(
+            "App::PropertyEnumeration",
+            "Closure",
+            GROUP,
+            "Shields (Z) or rubber seals (RS); single closures sit on the top face",
+        )
         obj.Closure = BD.CLOSURES
         obj.Closure = "Open"
-        obj.addProperty("App::PropertyBool", "Flanged", GROUP,
-                        translate("Bearings", "Flanged outer ring (F/MF variants, miniature sizes only)"))
-        obj.addProperty("App::PropertyEnumeration", "DetailLevel", GROUP,
-                        translate("Bearings", "Envelope: one solid; Standard: rings, balls, shields; Detailed: adds cage"))
+        obj.addProperty(
+            "App::PropertyBool",
+            "Flanged",
+            GROUP,
+            "Flanged outer ring (F/MF variants, miniature sizes only)",
+        )
+        obj.addProperty(
+            "App::PropertyEnumeration",
+            "DetailLevel",
+            GROUP,
+            "Envelope: one solid; Standard: rings, balls, shields; Detailed: adds cage",
+        )
         obj.DetailLevel = BG.DETAIL_LEVELS
         obj.DetailLevel = "Standard"
-        obj.addProperty("App::PropertyEnumeration", "MatchTo", GROUP,
-                        translate("Bearings", "With Designation 'Auto': match the edge to the bore (Shaft) or OD (Housing)"))
+        obj.addProperty(
+            "App::PropertyEnumeration",
+            "MatchTo",
+            GROUP,
+            "With Designation 'Auto': match the edge to the bore (Shaft) or OD (Housing)",
+        )
         obj.MatchTo = MATCH_TO
-        obj.addProperty("App::PropertyLinkSubGlobal", "BaseObject", GROUP,
-                        translate("Bearings", "Circular edge the bearing is attached to"))
-        obj.addProperty("App::PropertyBool", "Invert", GROUP,
-                        translate("Bearings", "Flip the bearing to the other side of the edge"))
-        obj.addProperty("App::PropertyDistance", "Offset", GROUP,
-                        translate("Bearings", "Shift along the bearing axis"))
+        obj.addProperty(
+            "App::PropertyLinkSubGlobal",
+            "BaseObject",
+            GROUP,
+            "Circular edge the bearing is attached to",
+        )
+        obj.addProperty(
+            "App::PropertyBool", "Invert", GROUP, "Flip the bearing to the other side of the edge"
+        )
+        obj.addProperty("App::PropertyDistance", "Offset", GROUP, "Shift along the bearing axis")
 
         for name, tip in (
             ("BoreDiameter", "Bore diameter d"),
@@ -87,13 +106,16 @@ class BearingObject:
             ("PitchDiameter", "Computed pitch diameter dm"),
             ("BallDiameter", "Computed ball diameter Dw"),
         ):
-            obj.addProperty("App::PropertyLength", name, INFO, translate("Bearings", tip))
+            obj.addProperty("App::PropertyLength", name, INFO, tip)
             obj.setEditorMode(name, 1)
-        obj.addProperty("App::PropertyInteger", "BallCount", INFO,
-                        translate("Bearings", "Computed number of balls"))
+        obj.addProperty("App::PropertyInteger", "BallCount", INFO, "Computed number of balls")
         obj.setEditorMode("BallCount", 1)
-        obj.addProperty("App::PropertyString", "FullDesignation", INFO,
-                        translate("Bearings", "Designation including flange and closure codes"))
+        obj.addProperty(
+            "App::PropertyString",
+            "FullDesignation",
+            INFO,
+            "Designation including flange and closure codes",
+        )
         obj.setEditorMode("FullDesignation", 1)
 
         if attach_to:
@@ -125,11 +147,15 @@ class BearingObject:
         frame = self._attached_frame(obj)
         if obj.BaseObject and frame is None:
             FreeCAD.Console.PrintWarning(
-                translate("Bearings", "{}: attached element is not a circular edge\n").format(obj.Label))
+                "{}: attached element is not a circular edge\n".format(obj.Label)
+            )
 
         if obj.Designation == BD.AUTO:
-            row = BD.auto_match(obj.Series, frame[2], obj.MatchTo) if frame else \
-                BD.get_row(obj.Series, BD.SERIES[obj.Series][2])
+            row = (
+                BD.auto_match(obj.Series, frame[2], obj.MatchTo)
+                if frame
+                else BD.get_row(obj.Series, BD.SERIES[obj.Series][2])
+            )
         else:
             row = BD.get_row(obj.Series, obj.Designation)
         if row is None:
@@ -138,8 +164,10 @@ class BearingObject:
         flanged = obj.Flanged and row.has_flange
         if obj.Flanged and not row.has_flange:
             FreeCAD.Console.PrintWarning(
-                translate("Bearings", "{}: no flanged variant of {} in the table, flange ignored\n")
-                .format(obj.Label, row.name))
+                "{}: no flanged variant of {} in the table, flange ignored\n".format(
+                    obj.Label, row.name
+                )
+            )
 
         shape, colors = BG.build(row, obj.Closure, flanged, obj.DetailLevel)
         self.face_colors = colors
@@ -159,8 +187,9 @@ class BearingObject:
             center, normal = frame[0], frame[1]
             if obj.Invert:
                 normal = -normal
-            placement = FreeCAD.Placement(center + normal * obj.Offset.Value,
-                                          FreeCAD.Rotation(V(0, 0, 1), normal))
+            placement = FreeCAD.Placement(
+                center + normal * obj.Offset.Value, FreeCAD.Rotation(V(0, 0, 1), normal)
+            )
             # the frame is global; express it in the container the bearing lives in
             placement = BRS.parent_placement(obj).inverse().multiply(placement)
         obj.Shape = shape
@@ -185,8 +214,10 @@ class BearingObject:
             self.auto_target = target
 
     def dumps(self):
-        return {"auto_label": getattr(self, "auto_label", None),
-                "auto_target": getattr(self, "auto_target", None)}
+        return {
+            "auto_label": getattr(self, "auto_label", None),
+            "auto_target": getattr(self, "auto_target", None),
+        }
 
     def loads(self, state):
         self.face_colors = []
@@ -210,8 +241,8 @@ class ViewProviderBearing:
         if colors and len(colors) == len(obj.Shape.Faces):
             try:
                 obj.ViewObject.DiffuseColor = colors
-            except Exception:
-                pass
+            except Exception as e:
+                FreeCAD.Console.PrintLog("%s: face colors not applied: %s\n" % (obj.Label, e))
 
     def getIcon(self):
         series = getattr(getattr(self, "Object", None), "Series", "60")

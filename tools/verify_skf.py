@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Cross-check BRData/*.csv against SKF's public deep groove ball bearing table.
 
     python3 tools/verify_skf.py
@@ -15,10 +16,12 @@ import re
 import subprocess
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-URL = ("https://search.skf.com/prod/search-skfcom/rest/apps/skfcom/searchers/dynamic_table"
-       "?system=metric&language=en&locale=en-in&category=Deep%20groove%20ball%20bearings"
-       "&contentstack_taxonomy_uid=blt634a650a928c34a2&sort=PIM001%7CFloating%20point%7CASCENDING"
-       "&offset={offset}&hits=1000")
+URL = (
+    "https://search.skf.com/prod/search-skfcom/rest/apps/skfcom/searchers/dynamic_table"
+    "?system=metric&language=en&locale=en-in&category=Deep%20groove%20ball%20bearings"
+    "&contentstack_taxonomy_uid=blt634a650a928c34a2&sort=PIM001%7CFloating%20point%7CASCENDING"
+    "&offset={offset}&hits=1000"
+)
 CLOSED = re.compile(r"(2Z|2RS|2RZ|RSH|RSL|RZ|-Z|-RS|ZS|ZNR|Z$|RS1)")
 
 
@@ -26,8 +29,11 @@ def fetch():
     rows, offset, total = {}, 0, None
     while total is None or offset < total:
         # curl instead of urllib: python.org builds on macOS often lack CA certificates
-        out = subprocess.run(["curl", "-sfS", "-m", "120", "-A", "Mozilla/5.0", URL.format(offset=offset)],
-                             check=True, capture_output=True).stdout
+        out = subprocess.run(
+            ["curl", "-sfS", "-m", "120", "-A", "Mozilla/5.0", URL.format(offset=offset)],
+            check=True,
+            capture_output=True,
+        ).stdout
         data = json.loads(out)
         total = data["documentList"]["numberOfHits"]
         docs = data["documentList"]["documents"]

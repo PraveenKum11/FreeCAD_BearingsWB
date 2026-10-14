@@ -1,11 +1,11 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 
 class BearingsWorkbench(Workbench):
     import BRutils
 
-    MenuText = BRutils.translate("Workbench", "Bearings")
-    ToolTip = BRutils.translate("Workbench", "Parametric rolling bearings")
+    MenuText = "Bearings"
+    ToolTip = "Parametric rolling bearings"
     Icon = BRutils.icon("BearingsWB.svg")
 
     def Initialize(self):

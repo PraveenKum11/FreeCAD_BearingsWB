@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Task panel and command for 3D-printable bearings (ported from the macro dialog)."""
 
 import FreeCAD as App
@@ -7,10 +7,45 @@ from PySide import QtCore, QtGui
 
 import BRselection as BRS
 import PrintableBearing as PB
-from BRutils import icon, translate
+from BRutils import icon
 
 TITLE = "Printable Bearing"
 CUSTOM = "Custom"
+
+# Tooltips for the panel's own controls. They describe how the panel behaves, so they
+# live next to that code; what the bearing parameters mean is in PB.BEARING_DOCS / CAGE_DOCS.
+UI_HELP = {
+    "Races": "Groove selected body: cut the ball groove into the body the edge belongs to; the "
+    "body itself becomes the races. On a bore, the bore is the bearing's inner diameter: a "
+    "thin inner race is split off and the rest of the body is the outer race. On an outer "
+    "surface it is the other way round. A plain ring becomes the inner and outer race. "
+    "The other diameter and the height set where the groove goes: the other diameter "
+    "starts %g mm from the selected one, the height is the length of the selected bore "
+    "or surface.\n"
+    "Create races: build a new ring with both races from the sizes below. The selected "
+    "edge (e.g. the end of a shaft or a housing bore; the origin if nothing is selected) "
+    "sets the bearing's position and axis." % PB.OTHER_DIAMETER_OFFSET,
+    "EdgeIs": "Is the selected edge the bearing's inner or outer diameter? When grooving the "
+    "selected body this is detected: a bore is the inner diameter, an outer surface the "
+    "outer diameter. When creating races it is preset from the edge (end of a shaft: "
+    "inner; housing bore: outer) and can be changed. That diameter is taken from the "
+    "edge and locked.",
+    "Reverse": "Build the bearing on the other side of the selected edge (or of the XY plane).",
+    "Cage": "Snap-in cage that sits in the gap between the races and keeps the balls evenly "
+    "spaced. Built as a separate 'Cage' body. Untick to leave it out.",
+    "Balls": "Also model the balls, as a separate 'Balls' body, sized and spaced from the "
+    "values above.",
+    "Size": "Prefill the inner diameter, outer diameter and height from a catalog bearing "
+    "(608, 6204, MR105, ...). With a selected edge, only sizes matching its diameter are "
+    "listed. Custom: enter the sizes yourself.",
+    "Preview": "Show the bearing in the 3D view while editing: the inner and outer diameter "
+    "as labelled rings on both faces, and a see-through view of the races, balls and cage. "
+    "It is only a preview; nothing is added to the document until OK.",
+    "BallPreset": "Common balls to buy for printed bearings. Sets the ball diameter; "
+    "airsoft BBs are nominally 6 mm but measure 5.95 mm.",
+    "BallDiameter": PB.BEARING_DOCS["BallDiameter"]
+    + " Default %g mm; it is not changed for you when the sizes change." % PB.DEFAULT_BALL_DIAMETER,
+}
 
 
 def get_selection():
@@ -113,7 +148,9 @@ class Preview:
                 continue
             for z in (-h, h):
                 rings.addChild(self._ring(r, z, RING_COLORS[key]))
-            rings.addChild(self._label("%s Ø%.2f" % (key, values[key]), r, h, RING_COLORS[key], key == "ID"))
+            rings.addChild(
+                self._label("%s Ø%.2f" % (key, values[key]), r, h, RING_COLORS[key], key == "ID")
+            )
         root.addChild(rings)
 
         self.view.getSceneGraph().addChild(root)
@@ -147,8 +184,10 @@ class Preview:
         mat = coin.SoBaseColor()
         mat.rgb.setValue(*rgb)
         sep.addChild(mat)
-        pts = [(r * math.cos(2 * math.pi * i / segments), r * math.sin(2 * math.pi * i / segments), z)
-               for i in range(segments + 1)]
+        pts = [
+            (r * math.cos(2 * math.pi * i / segments), r * math.sin(2 * math.pi * i / segments), z)
+            for i in range(segments + 1)
+        ]
         coords = coin.SoCoordinate3()
         coords.point.setValues(0, len(pts), pts)
         sep.addChild(coords)
@@ -184,13 +223,25 @@ class Preview:
 class TaskPanel:
     """One panel for both modes, as the macro's dialog."""
 
-    def __init__(self, edge=None, measured=None, create_inner=True, bearing=None, reverse=False):
-        """`measured`: measure_body() result if the selected body can be grooved, else None.
+    def __init__(
+        self,
+        edge=None,
+        measured=None,
+        create_inner=True,
+        bearing=None,
+        reverse=False,
+        feature=None,
+        body=None,
+    ):
+        """`edge`: the selected circular edge (global), or None.
+        `measured`: measure_body() result if the selected body can be grooved, else None.
         `create_inner`: default for "Selected edge is" when creating races.
         `bearing`: a standard Bearing to replace (its size and placement are used).
-        `reverse`: default for "Reverse direction" (set so the races go into the material)."""
+        `reverse`: default for "Reverse direction" (set so the races go into the material).
+        `feature`, `body`: the object owning the edge and its PartDesign Body (or None)."""
         self.edge, self.measured, self.create_inner = edge, measured, create_inner
         self.bearing = bearing
+        self.feature, self.body = feature, body
         self._mode = None
         self.edge_dia = 2 * edge.Curve.Radius if edge else None
 
@@ -228,15 +279,15 @@ class TaskPanel:
         if measured:
             self.mode.addItem(PB.GROOVE)
         self.mode.addItem(PB.CREATE)
-        row(form, "Races:", self.mode, PB.UI_HELP["Races"])
+        row(form, "Races:", self.mode, UI_HELP["Races"])
 
         self.edge_is = QtGui.QComboBox()
         self.edge_is.addItems(["Inner diameter", "Outer diameter"])
         if edge:
-            row(form, "Selected edge (Ø %.2f) is:" % self.edge_dia, self.edge_is, PB.UI_HELP["EdgeIs"])
+            row(form, "Selected edge (Ø %.2f) is:" % self.edge_dia, self.edge_is, UI_HELP["EdgeIs"])
 
         self.size = QtGui.QComboBox()
-        row(form, "Catalog size:", self.size, PB.UI_HELP["Size"])
+        row(form, "Catalog size:", self.size, UI_HELP["Size"])
 
         d = self.edge_dia or 20.0
         self.id_ = spin(d)
@@ -248,15 +299,15 @@ class TaskPanel:
 
         self.reverse = QtGui.QCheckBox("Reverse direction")
         self.reverse.setChecked(reverse)
-        row(form, "", self.reverse, PB.UI_HELP["Reverse"])
+        row(form, "", self.reverse, UI_HELP["Reverse"])
 
         self.ball_preset = QtGui.QComboBox()
         self.ball_preset.addItem(CUSTOM)
         for label, dia in PB.BALL_PRESETS:
             self.ball_preset.addItem(label, dia)
-        row(form, "Ball preset:", self.ball_preset, PB.UI_HELP["BallPreset"])
+        row(form, "Ball preset:", self.ball_preset, UI_HELP["BallPreset"])
         self.ball = spin(PB.DEFAULT_BALL_DIAMETER)
-        row(form, "Ball diameter:", self.ball, PB.BEARING_DOCS["BallDiameter"])
+        row(form, "Ball diameter:", self.ball, UI_HELP["BallDiameter"])
         self.num_balls = QtGui.QSpinBox()
         self.num_balls.setRange(1, 1000)
         self.num_balls.setValue(PB.DEFAULT_NUM_BALLS)
@@ -276,15 +327,15 @@ class TaskPanel:
         row(cform, "Cage top offset:", self.cage_top, PB.CAGE_DOCS["CageTopOffset"])
         row(cform, "Pocket clearance:", self.pocket_clr, PB.CAGE_DOCS["PocketClearance"])
         row(cform, "Pocket rise:", self.pocket_rise, PB.CAGE_DOCS["PocketRise"])
-        row(form, None, self.cage, PB.UI_HELP["Cage"])
+        row(form, None, self.cage, UI_HELP["Cage"])
 
         self.balls = QtGui.QCheckBox("Create balls")
         self.balls.setChecked(False)
-        row(form, "Balls:", self.balls, PB.UI_HELP["Balls"])
+        row(form, "Balls:", self.balls, UI_HELP["Balls"])
 
         self.show_preview = QtGui.QCheckBox("Show preview")
         self.show_preview.setChecked(True)
-        row(form, "", self.show_preview, PB.UI_HELP["Preview"])
+        row(form, "", self.show_preview, UI_HELP["Preview"])
         # what is wrong with the current values, if anything (OK refuses them too)
         self.status = QtGui.QLabel()
         self.status.setWordWrap(True)
@@ -309,8 +360,16 @@ class TaskPanel:
         self.ball_preset.currentIndexChanged.connect(self.apply_ball_preset)
         self.ball.valueChanged.connect(self.sync_ball_preset)
 
-        for w in (self.id_, self.od, self.height, self.ball, self.cage_t, self.cage_top,
-                  self.pocket_clr, self.pocket_rise):
+        for w in (
+            self.id_,
+            self.od,
+            self.height,
+            self.ball,
+            self.cage_t,
+            self.cage_top,
+            self.pocket_clr,
+            self.pocket_rise,
+        ):
             w.valueChanged.connect(self.schedule_preview)
         self.num_balls.valueChanged.connect(self.schedule_preview)
         for w in (self.mode, self.edge_is):
@@ -355,8 +414,9 @@ class TaskPanel:
             self.preview.clear()
             return
         o = self.options()
-        frame = PB.preview_frame(o["mode"], self.edge, self.measured, o["values"]["Height"],
-                                 o["reverse"], self.bearing)
+        frame = PB.preview_frame(
+            o["mode"], self.edge, self.measured, o["values"]["Height"], o["reverse"], self.bearing
+        )
         try:
             self.preview.show(frame, o["values"], o["cage"])
         except Exception as e:  # a preview problem must never block the panel
@@ -469,8 +529,11 @@ class TaskPanel:
             locked.setEnabled(False)
             # The other diameter starts 15 mm away (both modes); afterwards it is only
             # reset when it ends up on the wrong side of the locked one
-            if mode_changed or (inner and self.od.value() <= self.edge_dia) \
-                    or (not inner and self.id_.value() >= self.edge_dia):
+            if (
+                mode_changed
+                or (inner and self.od.value() <= self.edge_dia)
+                or (not inner and self.id_.value() >= self.edge_dia)
+            ):
                 other.setValue(PB.other_diameter(self.edge_dia, inner))
         elif self.bearing is None:
             locked.setEnabled(True)
@@ -512,7 +575,7 @@ class TaskPanel:
             return False
         self._preview_timer.stop()
         self.preview.clear()
-        if build(o, self.edge, self.measured, self.bearing):
+        if self.build(o):
             Gui.Control.closeDialog()
             return True
         self.update_preview()
@@ -524,44 +587,46 @@ class TaskPanel:
         Gui.Control.closeDialog()
         return True
 
-
-# set by Activated(): what the panel builds on
-_context = {}
-
-
-def build(opts, edge, measured, bearing):
-    """Create the bearing from the panel's options. Returns False on failure."""
-    feature, body = _context.get("feature"), _context.get("body")
-    doc = feature.Document if feature else (App.ActiveDocument or App.newDocument("Bearing"))
-    split = True
-    doc.openTransaction("Printable bearing")
-    try:
-        if bearing is not None:
-            PB.convert_bearing(bearing, opts["cage"], opts["balls"], opts["values"])
-        elif opts["mode"] == PB.GROOVE:
-            before = len(body.Shape.Solids)
-            PB.groove_body(feature, edge, opts["values"], opts["cage"], opts["balls"])
-            split = len(body.Shape.Solids) > before
+    def build(self, opts):
+        """Create the bearing from the panel's options. Returns False on failure."""
+        if self.bearing is not None:
+            doc = self.bearing.Document
+        elif self.feature is not None:
+            doc = self.feature.Document
         else:
-            placement = PB.frame_placement(edge) if edge else App.Placement()
-            PB.create_races(doc, placement, opts["values"], opts["reverse"], opts["cage"], opts["balls"])
-    except Exception as e:
-        doc.abortTransaction()
-        App.Console.PrintError(str(e) + "\n")
-        QtGui.QMessageBox.warning(Gui.getMainWindow(), TITLE, str(e))
-        return False
-    doc.commitTransaction()
-    if Gui.ActiveDocument and Gui.ActiveDocument.ActiveView:
-        Gui.ActiveDocument.ActiveView.fitAll()  # the macro's SendMsgToActiveView("ViewFit") is gone in 1.1
-    if not split:
-        msg = (
-            "The groove did not split the body into separate inner and outer races. "
-            "Check the diameters and the height (the groove must cut through the body), "
-            "or edit them on BearingParameters."
-        )
-        App.Console.PrintWarning(msg + "\n")
-        QtGui.QMessageBox.warning(Gui.getMainWindow(), TITLE, msg)
-    return True
+            doc = App.ActiveDocument or App.newDocument("Bearing")
+        split = True
+        doc.openTransaction("Printable bearing")
+        try:
+            if self.bearing is not None:
+                PB.convert_bearing(self.bearing, opts["values"], opts["cage"], opts["balls"])
+            elif opts["mode"] == PB.GROOVE:
+                before = len(self.body.Shape.Solids)
+                PB.groove_body(self.feature, self.edge, opts["values"], opts["cage"], opts["balls"])
+                split = len(self.body.Shape.Solids) > before
+            else:
+                placement = PB.frame_placement(self.edge) if self.edge else App.Placement()
+                PB.create_races(
+                    doc, placement, opts["values"], opts["reverse"], opts["cage"], opts["balls"]
+                )
+        except Exception as e:
+            doc.abortTransaction()
+            App.Console.PrintError(str(e) + "\n")
+            QtGui.QMessageBox.warning(Gui.getMainWindow(), TITLE, str(e))
+            return False
+        doc.commitTransaction()
+        if Gui.ActiveDocument and Gui.ActiveDocument.ActiveView:
+            # the macro's SendMsgToActiveView("ViewFit") is gone in 1.1
+            Gui.ActiveDocument.ActiveView.fitAll()
+        if not split:
+            msg = (
+                "The groove did not split the body into separate inner and outer races. "
+                "Check the diameters and the height (the groove must cut through the body), "
+                "or edit them on BearingParameters."
+            )
+            App.Console.PrintWarning(msg + "\n")
+            QtGui.QMessageBox.warning(Gui.getMainWindow(), TITLE, msg)
+        return True
 
 
 def open_panel(preset=None):
@@ -579,10 +644,8 @@ def open_panel(preset=None):
         picked = get_selection()
     except ValueError as e:
         return fail(str(e))
-    _context.clear()
     if picked and picked[0] == "bearing":
         panel = TaskPanel(bearing=picked[1])
-        _context["feature"] = picked[1]
         Gui.Control.showDialog(panel)
         return panel
 
@@ -603,8 +666,7 @@ def open_panel(preset=None):
     if edge is not None and shape is not None:
         axis = App.Vector(edge.Curve.Axis)
         reverse = axis.dot(BRS.outward_normal(shape, edge)) > 0
-    _context.update(feature=feature, body=body)
-    panel = TaskPanel(edge, measured, create_inner, reverse=reverse)
+    panel = TaskPanel(edge, measured, create_inner, reverse=reverse, feature=feature, body=body)
     if preset:
         panel.apply_preset(*preset)
     Gui.Control.showDialog(panel)
@@ -615,13 +677,10 @@ class PrintableBearingCommand:
     def GetResources(self):
         return {
             "Pixmap": icon("PrintableBearing.svg"),
-            "MenuText": translate("Bearings", "3D-printable bearing"),
-            "ToolTip": translate(
-                "Bearings",
-                "3D-printable deep groove ball bearing: races, snap-in cage and balls as "
-                "separate PartDesign bodies.\nSelect a circular edge (shaft end, housing bore "
-                "or a bore to groove), a standard bearing to replace, or nothing.",
-            ),
+            "MenuText": "3D-printable bearing",
+            "ToolTip": "3D-printable deep groove ball bearing: races, snap-in cage and balls as "
+            "separate PartDesign bodies.\nSelect a circular edge (shaft end, housing bore "
+            "or a bore to groove), a standard bearing to replace, or nothing.",
         }
 
     def IsActive(self):

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """3D-printable deep groove ball bearings, built as PartDesign bodies.
 
 Ported from the DeepGrooveBallBearing macro (same author, originally MIT). The geometry
@@ -46,9 +46,8 @@ import Part
 import Sketcher
 
 import BearingData as BD
-from BearingGeometry import STANDARD_BALLS
+from BearingGeometry import revolve
 from BRselection import (  # noqa: F401  (frame_placement is part of this module's API)
-    coaxial_cylinders,
     cylinder_side,
     frame_placement,
     global_placement,
@@ -61,7 +60,9 @@ GROOVE = "Groove selected body"
 CREATE = "Create races"
 SIN60 = math.sqrt(3) / 2  # slot = ball Ø / 2, so the slot walls meet the ball at 60°
 
-# Help texts: shown as dialog tooltips and as the datum's property descriptions
+# What each parameter means: the datum's property descriptions, also used as tooltips by
+# the task panel. Describe the bearing here; the panel's own behaviour is described in
+# PrintableBearingGui.UI_HELP.
 BEARING_DOCS = {
     "ID": "Bore of the inner race, i.e. the shaft diameter the bearing fits on.",
     "OD": "Outside diameter of the outer race, i.e. the housing bore the bearing fits in.",
@@ -69,8 +70,7 @@ BEARING_DOCS = {
     "grooves are centered in it.",
     "BallDiameter": "Diameter of the balls. The balls run on the pitch diameter, midway between "
     "ID and OD, and the gap between the two races is half the ball diameter. "
-    "Must be smaller than the ring wall, (OD - ID) / 2, and than the height. "
-    "Default 4 mm; it is not changed for you when the sizes change.",
+    "Must be smaller than the ring wall, (OD - ID) / 2, and than the height.",
     "NumBalls": "How many balls (and cage pockets) are spaced evenly around the bearing. "
     "The maximum depends on the ball size and the pitch diameter.",
 }
@@ -97,36 +97,6 @@ CAGE_DOCS = {
     "makes the pocket mouth narrower than the ball, so the balls snap in and are "
     "held. The cage is drawn seated: moved along the axis until the pockets are "
     "centered on the balls.",
-}
-UI_HELP = {
-    "Races": "Groove selected body: cut the ball groove into the body the edge belongs to; the "
-    "body itself becomes the races. On a bore, the bore is the bearing's inner diameter: a "
-    "thin inner race is split off and the rest of the body is the outer race. On an outer "
-    "surface it is the other way round. A plain ring becomes the inner and outer race. "
-    "The other diameter and the height set where the groove goes: the other diameter "
-    "starts 15 mm from the selected one, the height is the length of the selected bore "
-    "or surface.\n"
-    "Create races: build a new ring with both races from the sizes below. The selected "
-    "edge (e.g. the end of a shaft or a housing bore; the origin if nothing is selected) "
-    "sets the bearing's position and axis.",
-    "EdgeIs": "Is the selected edge the bearing's inner or outer diameter? When grooving the "
-    "selected body this is detected: a bore is the inner diameter, an outer surface the "
-    "outer diameter. When creating races it is preset from the edge (end of a shaft: "
-    "inner; housing bore: outer) and can be changed. That diameter is taken from the "
-    "edge and locked.",
-    "Reverse": "Build the bearing on the other side of the selected edge (or of the XY plane).",
-    "Cage": "Snap-in cage that sits in the gap between the races and keeps the balls evenly "
-    "spaced. Built as a separate 'Cage' body. Untick to leave it out.",
-    "Balls": "Also model the balls, as a separate 'Balls' body, sized and spaced from the "
-    "values above.",
-    "Size": "Prefill the inner diameter, outer diameter and height from a catalog bearing "
-    "(608, 6204, MR105, ...). With a selected edge, only sizes matching its diameter are "
-    "listed. Custom: enter the sizes yourself.",
-    "Preview": "Show the bearing in the 3D view while editing: the inner and outer diameter "
-    "as labelled rings on both faces, and a see-through view of the races, balls and cage. "
-    "It is only a preview; nothing is added to the document until OK.",
-    "BallPreset": "Common balls to buy for printed bearings. Sets the ball diameter; "
-    "airsoft BBs are nominally 6 mm but measure 5.95 mm.",
 }
 
 
@@ -192,8 +162,7 @@ def measure_body(body, edge):
 
     `edge` is in document coordinates. Returns the edge's diameter, whether it is the
     bearing's ID (a bore) or OD (an outer surface), the selected cylinder's length and
-    the axial offset of its middle from the edge's plane, and a suggestion for the
-    other diameter (the nearest coaxial cylinder on the material side, or None).
+    the axial offset of its middle from the edge's plane.
     """
     # body.Shape includes the body's own placement but not its containers' (App::Part),
     # so bring the edge into the body's container coordinates first
@@ -204,24 +173,12 @@ def measure_body(body, edge):
     solid = nearest_solid(body.Shape, edge)
     side, lo, hi = cylinder_side(solid, edge)
     if side is None:
-        raise ValueError(
-            "Could not find the cylindrical face of the selected edge on the body."
-        )
-    r = edge.Curve.Radius
-    is_inner = side == "outside"  # a bore is the bearing's inner diameter
-    radii = [rad for _, rad in coaxial_cylinders(solid, edge)]
-    if is_inner:
-        others = [rad for rad in radii if rad > r + 1e-4]
-        other = min(others) if others else None
-    else:
-        others = [rad for rad in radii if rad < r - 1e-4]
-        other = max(others) if others else None
+        raise ValueError("Could not find the cylindrical face of the selected edge on the body.")
     return {
-        "dia": 2 * r,
-        "is_inner": is_inner,
+        "dia": 2 * edge.Curve.Radius,
+        "is_inner": side == "outside",  # a bore is the bearing's inner diameter
         "height": hi - lo,
         "mid": (lo + hi) / 2,
-        "other": 2 * other if other else None,
     }
 
 
@@ -249,35 +206,6 @@ def other_diameter(selected, selected_is_inner):
     smaller = selected - OTHER_DIAMETER_OFFSET
     return round(smaller if smaller > 0 else selected / 2, 2)
 
-def fit_values(values, reset=False):
-    """Defaults: ball Ø4, cage 1.5, 10 balls (as in deep-groove-bb.FCStd). They are set on
-    `reset`; otherwise only values that no longer fit after ID/OD/height changed are
-    changed. When Ø4 doesn't fit the bearing, a smaller ball is used instead.
-    Returns a new dict; the macro dialog's fit_sizes() did the same on its widgets."""
-    v = dict(values)
-    wall = (v["OD"] - v["ID"]) / 2
-    if wall <= 0:
-        return v
-    limit = min(wall, v["Height"])  # the ball must be smaller than both
-    if reset or v["BallDiameter"] >= limit:
-        fallback = round(min(wall * 2 / 3, v["Height"] * 0.6), 2)
-        # prefer a ball you can buy: the largest standard size up to the fallback
-        buyable = [b for b in STANDARD_BALLS if 0.5 * fallback <= b <= fallback + 1e-9]
-        if buyable:
-            fallback = buyable[-1]
-        v["BallDiameter"] = DEFAULT_BALL_DIAMETER if DEFAULT_BALL_DIAMETER < limit else fallback
-    # The gap between the races is half the ball diameter; the cage must fit in it
-    gap = v["BallDiameter"] / 2
-    if reset or v["CageThickness"] > gap:
-        cage = CAGE_DEFAULTS["CageThickness"]
-        v["CageThickness"] = cage if cage < gap else round(v["BallDiameter"] * 0.375, 2)
-    n = max_balls(v["ID"], v["OD"], v["BallDiameter"], v["PocketClearance"])
-    if reset:
-        v["NumBalls"] = max(1, min(DEFAULT_NUM_BALLS, n))
-    elif v.get("NumBalls", DEFAULT_NUM_BALLS) > n:
-        v["NumBalls"] = max(1, n)
-    return v
-
 
 def validate(v, cage=False, balls=False):
     id_, od, height, ball = v["ID"], v["OD"], v["Height"], v["BallDiameter"]
@@ -297,16 +225,13 @@ def validate(v, cage=False, balls=False):
         )
     if ball >= height:
         raise ValueError(
-            "Ball diameter Ø%.2f must be smaller than the height (%.2f)."
-            % (ball, height)
+            "Ball diameter Ø%.2f must be smaller than the height (%.2f)." % (ball, height)
         )
     if balls or cage:
         clearance = v["PocketClearance"] if cage else 0.0
         n = max_balls(id_, od, ball, clearance)
         if not 1 <= v.get("NumBalls", DEFAULT_NUM_BALLS) <= n:
-            raise ValueError(
-                "Number of balls must be between 1 and %d for these sizes." % n
-            )
+            raise ValueError("Number of balls must be between 1 and %d for these sizes." % n)
     if not cage:
         return
     if v["CageThickness"] <= 0:
@@ -353,13 +278,46 @@ def make_params(body, values, placement, readonly=()):
 
 def values_of(params):
     names = tuple(BEARING_DOCS) + tuple(CAGE_DEFAULTS)
+    return {n: getattr(params, n).Value if n != "NumBalls" else params.NumBalls for n in names}
+
+
+# The groove and cage dimensions are computed once here, for both the PartDesign
+# features (initial sketch geometry) and the task panel preview. The sketches are then
+# driven by expressions on BearingParameters, which repeat these formulas;
+# tests/test_printable.py checks that a built bearing matches preview_shapes(), also
+# after its parameters are edited.
+
+
+def groove_profile(v):
+    """Groove profile dimensions in the bearing frame (X radial, Y = Z axial, origin on
+    the axis at mid-height): pitch radius rp, ball radius rb, half slot width w, half
+    height h, and yi, the height where the slot walls meet the ball circle."""
+    ball = v["BallDiameter"]
     return {
-        n: getattr(params, n).Value if n != "NumBalls" else params.NumBalls
-        for n in names
+        "rp": (v["ID"] + v["OD"]) / 4,  # ball center
+        "rb": ball / 2,
+        "w": ball / 4,  # slot = ball diameter / 2
+        "h": v["Height"] / 2,
+        "yi": ball / 2 * SIN60,
     }
 
 
-def draw_race_profile(sketch, pitch_dia, height, ball_dia):
+def cage_profile(v):
+    """Cage ring cross-section (r_in, r_out, bottom, top) in the bearing frame.
+
+    As designed the cage reaches from the bottom face to CageTopOffset below where the
+    slot walls meet the ball, with the pocket rising PocketRise above its top. It is
+    shown seated: shifted along the axis so the pocket center lands on the ball center.
+    """
+    g = groove_profile(v)
+    t = v["CageThickness"]
+    design_top = g["yi"] - v["CageTopOffset"]
+    top = (v["BallDiameter"] + v["PocketClearance"]) / 2 - v["PocketRise"]
+    bottom = -g["h"] + (top - design_top)
+    return g["rp"] - t / 2, g["rp"] + t / 2, bottom, top
+
+
+def draw_race_profile(sketch, v):
     """Ball circle + slot through the full height, as in deep-groove-bb.FCStd.
 
     Origin at mid-height on the axis. Driving constraints are named
@@ -367,20 +325,15 @@ def draw_race_profile(sketch, pitch_dia, height, ball_dia):
     """
     V = App.Vector
     Z = V(0, 0, 1)
-    rp = pitch_dia / 2  # pitch radius (ball center)
-    rb = ball_dia / 2  # ball radius
-    w = ball_dia / 4  # half slot width (slot = ball diameter / 2)
-    h = height / 2
-    yi = rb * SIN60  # where the slot walls meet the ball circle
+    g = groove_profile(v)
+    rp, rb, w, h, yi = g["rp"], g["rb"], g["w"], g["h"], g["yi"]
     phi = math.atan2(yi, w)
 
     def line(x1, y1, x2, y2):
         return sketch.addGeometry(Part.LineSegment(V(x1, y1, 0), V(x2, y2, 0)))
 
     def arc(a1, a2):
-        return sketch.addGeometry(
-            Part.ArcOfCircle(Part.Circle(V(rp, 0, 0), Z, rb), a1, a2)
-        )
+        return sketch.addGeometry(Part.ArcOfCircle(Part.Circle(V(rp, 0, 0), Z, rb), a1, a2))
 
     ball = sketch.addGeometry(Part.Circle(V(rp, 0, 0), Z, rb), True)
     l1 = line(rp - w, -yi, rp - w, -h)  # bottom slot, inner wall
@@ -395,9 +348,9 @@ def draw_race_profile(sketch, pitch_dia, height, ball_dia):
     C = Sketcher.Constraint
     named = {
         "PitchRadius": C("DistanceX", -1, 1, ball, 3, rp),
-        "BallDiameter": C("Diameter", ball, ball_dia),
+        "BallDiameter": C("Diameter", ball, 2 * rb),
         "SlotWidth": C("DistanceX", l2, 1, l2, 2, 2 * w),
-        "Height": C("DistanceY", l2, 1, l5, 1, height),
+        "Height": C("DistanceY", l2, 1, l5, 1, 2 * h),
     }
     for name, con in named.items():
         sketch.renameConstraint(sketch.addConstraint(con), name)
@@ -440,7 +393,7 @@ def make_groove(body, params):
     p = params.Name
     sketch = body.newObject("Sketcher::SketchObject", "BearingSketch")
     attach(sketch, params, "ObjectXZ")
-    draw_race_profile(sketch, (v["ID"] + v["OD"]) / 2, v["Height"], v["BallDiameter"])
+    draw_race_profile(sketch, v)
     for name, expr in (
         ("PitchRadius", "(%s.ID + %s.OD) / 4" % (p, p)),
         ("BallDiameter", p + ".BallDiameter"),
@@ -461,15 +414,8 @@ def make_cage(doc, races, params):
     """Snap-in cage between the races, in its own Body that follows the bearing frame."""
     v = values_of(params)
     p = params.Name
-    rp = (v["ID"] + v["OD"]) / 4
-    t = v["CageThickness"]
+    r_in, r_out, bottom, top = cage_profile(v)
     pocket_d = v["BallDiameter"] + v["PocketClearance"]
-    # Cage as designed: bottom face .. CageTopOffset below where the slot meets the ball,
-    # with the pocket rising PocketRise above its top. Seated, it shifts along the axis
-    # so the pocket center lands on the ball center (y = 0).
-    design_top = v["BallDiameter"] * SIN60 / 2 - v["CageTopOffset"]
-    top = pocket_d / 2 - v["PocketRise"]
-    bottom = -v["Height"] / 2 + (top - design_top)
 
     body = doc.addObject("PartDesign::Body", "Cage")
     follow_bearing(body, races, params)
@@ -479,15 +425,8 @@ def make_cage(doc, races, params):
     C = Sketcher.Constraint
     ring = body.newObject("Sketcher::SketchObject", "CageSketch")
     attach(ring, origin_feature(body, "XZ_Plane"))
-    pts = [
-        V(rp - t / 2, bottom, 0),
-        V(rp + t / 2, bottom, 0),
-        V(rp + t / 2, top, 0),
-        V(rp - t / 2, top, 0),
-    ]
-    lines = [
-        ring.addGeometry(Part.LineSegment(pts[i], pts[(i + 1) % 4])) for i in range(4)
-    ]
+    pts = [V(r_in, bottom, 0), V(r_out, bottom, 0), V(r_out, top, 0), V(r_in, top, 0)]
+    lines = [ring.addGeometry(Part.LineSegment(pts[i], pts[(i + 1) % 4])) for i in range(4)]
     ring.addConstraint(
         [C("Coincident", lines[i], 2, lines[(i + 1) % 4], 1) for i in range(4)]
         + [
@@ -497,17 +436,18 @@ def make_cage(doc, races, params):
             C("Vertical", lines[3]),
         ]
     )
+    # the expressions of cage_profile()
     design_top_expr = "(%s.BallDiameter * sqrt(3) / 4 - %s.CageTopOffset)" % (p, p)
     top_expr = "(%s.BallDiameter + %s.PocketClearance) / 2 - %s.PocketRise" % (p, p, p)
     for name, con, expr in (
         (
             "CageInner",
-            C("DistanceX", -1, 1, lines[0], 1, rp - t / 2),
+            C("DistanceX", -1, 1, lines[0], 1, r_in),
             "(%s.ID + %s.OD) / 4 - %s.CageThickness / 2" % (p, p, p),
         ),
         (
             "CageThickness",
-            C("DistanceX", lines[0], 1, lines[0], 2, t),
+            C("DistanceX", lines[0], 1, lines[0], 2, r_out - r_in),
             p + ".CageThickness",
         ),
         (
@@ -530,14 +470,10 @@ def make_cage(doc, races, params):
     pk = body.newObject("Sketcher::SketchObject", "PocketSketch")
     attach(pk, origin_feature(body, "YZ_Plane"))
     circle = pk.addGeometry(Part.Circle(V(0, 0, 0), V(0, 0, 1), pocket_d / 2))
-    pk.addConstraint(
-        C("Coincident", circle, 3, -1, 1)
-    )  # centered on the ball (seated cage)
+    pk.addConstraint(C("Coincident", circle, 3, -1, 1))  # centered on the ball (seated cage)
     c = pk.addConstraint(C("Diameter", circle, pocket_d))
     pk.renameConstraint(c, "PocketDiameter")
-    pk.setExpression(
-        ".Constraints.PocketDiameter", "%s.BallDiameter + %s.PocketClearance" % (p, p)
-    )
+    pk.setExpression(".Constraints.PocketDiameter", "%s.BallDiameter + %s.PocketClearance" % (p, p))
 
     pocket = body.newObject("PartDesign::Pocket", "BallPocket")
     pocket.Profile = pk
@@ -564,9 +500,7 @@ def follow_bearing(body, races, params):
     if container:
         container.addObject(body)
     body.Placement = races.Placement.multiply(params.Placement)
-    body.setExpression(
-        "Placement", "%s.Placement * %s.Placement" % (races.Name, params.Name)
-    )
+    body.setExpression("Placement", "%s.Placement * %s.Placement" % (races.Name, params.Name))
 
 
 def make_balls(doc, races, params):
@@ -580,9 +514,7 @@ def make_balls(doc, races, params):
     attach(ball, origin_feature(body, "XY_Plane"))
     ball.Radius = v["BallDiameter"] / 2
     ball.setExpression("Radius", p + ".BallDiameter / 2")
-    ball.AttachmentOffset = App.Placement(
-        App.Vector((v["ID"] + v["OD"]) / 4, 0, 0), App.Rotation()
-    )
+    ball.AttachmentOffset = App.Placement(App.Vector((v["ID"] + v["OD"]) / 4, 0, 0), App.Rotation())
     ball.setExpression(".AttachmentOffset.Base.x", "(%s.ID + %s.OD) / 4" % (p, p))
 
     pattern = body.newObject("PartDesign::PolarPattern", "BallPattern")
@@ -611,9 +543,7 @@ def groove_body(feature, edge, values, cage=True, balls=False):
     doc = feature.Document
     body = find_body(feature)
     if body is None:
-        raise ValueError(
-            "To groove the selected body, the edge must belong to a PartDesign Body."
-        )
+        raise ValueError("To groove the selected body, the edge must belong to a PartDesign Body.")
     m = measure_body(body, edge)
     key = "ID" if m["is_inner"] else "OD"
     values = dict(values, **{key: m["dia"]})
@@ -676,9 +606,7 @@ def create_races(doc, placement, values, reverse=False, cage=True, balls=False):
     ring = body.newObject("Sketcher::SketchObject", "RingSketch")
     attach(ring, origin_feature(body, "XY_Plane"))
     for name in ("ID", "OD"):
-        g = ring.addGeometry(
-            Part.Circle(App.Vector(), App.Vector(0, 0, 1), values[name] / 2)
-        )
+        g = ring.addGeometry(Part.Circle(App.Vector(), App.Vector(0, 0, 1), values[name] / 2))
         ring.addConstraint(Sketcher.Constraint("Coincident", g, 3, -1, 1))
         ring.renameConstraint(
             ring.addConstraint(Sketcher.Constraint("Diameter", g, values[name])), name
@@ -708,28 +636,35 @@ def preview_shapes(v, cage=True):
     """Light Part shapes of the bearing, in the bearing frame (origin on the axis at
     mid-height, Z = axis), for the task panel preview: [(role, shape), ...].
 
-    Same profile as draw_race_profile() and the same cage height as make_cage(), but
-    revolved directly from 2D profiles (no booleans, no cage pockets) so it is fast
-    enough to rebuild on every edit. Returns [] when the values can't be drawn.
+    Same groove_profile() and cage_profile() as the PartDesign features, but revolved
+    directly from 2D profiles (no booleans, no cage pockets) so it is fast enough to
+    rebuild on every edit. Returns [] when the values can't be drawn.
     """
-    from BearingGeometry import _revolve
-
     id_, od, height, ball = v["ID"], v["OD"], v["Height"], v["BallDiameter"]
     if not (0 < id_ < od and height > 0 and 0 < ball < min((od - id_) / 2, height)):
         return []
-    rp = (id_ + od) / 4  # pitch radius (ball center)
-    rb = ball / 2  # ball radius
-    w = ball / 4  # half slot width (slot = ball diameter / 2)
-    h = height / 2
-    yi = rb * SIN60  # where the slot walls meet the ball circle
-    shapes = []
+    g = groove_profile(v)
+    rp, rb, w, h, yi = g["rp"], g["rb"], g["w"], g["h"], g["yi"]
+    inner = [
+        ("p", id_ / 2, -h, 0),
+        ("p", rp - w, -h, 0),
+        ("p", rp - w, -yi, 0),
+        ("a", rp - rb, 0),  # ball arc into the inner race
+        ("p", rp - w, yi, 0),
+        ("p", rp - w, h, 0),
+        ("p", id_ / 2, h, 0),
+    ]
+    outer = [
+        ("p", rp + w, -h, 0),
+        ("p", od / 2, -h, 0),
+        ("p", od / 2, h, 0),
+        ("p", rp + w, h, 0),
+        ("p", rp + w, yi, 0),
+        ("a", rp + rb, 0),  # ball arc into the outer race
+        ("p", rp + w, -yi, 0),
+    ]
     try:
-        shapes.append(("inner race", _revolve([
-            ("p", id_ / 2, -h, 0), ("p", rp - w, -h, 0), ("p", rp - w, -yi, 0),
-            ("a", rp - rb, 0), ("p", rp - w, yi, 0), ("p", rp - w, h, 0), ("p", id_ / 2, h, 0)])))
-        shapes.append(("outer race", _revolve([
-            ("p", rp + w, -h, 0), ("p", od / 2, -h, 0), ("p", od / 2, h, 0), ("p", rp + w, h, 0),
-            ("p", rp + w, yi, 0), ("a", rp + rb, 0), ("p", rp + w, -yi, 0)])))
+        shapes = [("inner race", revolve(inner)), ("outer race", revolve(outer))]
         n = max(1, int(v.get("NumBalls", DEFAULT_NUM_BALLS)))
         sphere = Part.makeSphere(rb, App.Vector(rp, 0, 0))
         for k in range(n):
@@ -737,14 +672,10 @@ def preview_shapes(v, cage=True):
             s.rotate(App.Vector(), App.Vector(0, 0, 1), 360.0 * k / n)
             shapes.append(("ball", s))
         if cage and 0 < v["CageThickness"] <= rb + 1e-9:
-            t = v["CageThickness"]
-            design_top = ball * SIN60 / 2 - v["CageTopOffset"]
-            top = (ball + v["PocketClearance"]) / 2 - v["PocketRise"]
-            bottom = -h + (top - design_top)
+            r_in, r_out, bottom, top = cage_profile(v)
             if top > bottom:
-                shapes.append(("cage", _revolve([
-                    ("p", rp - t / 2, bottom, 0), ("p", rp + t / 2, bottom, 0),
-                    ("p", rp + t / 2, top, 0), ("p", rp - t / 2, top, 0)])))
+                ring = [(r_in, bottom), (r_out, bottom), (r_out, top), (r_in, top)]
+                shapes.append(("cage", revolve([("p", x, z, 0) for x, z in ring])))
     except Part.OCCError:
         return []
     return shapes
@@ -754,23 +685,28 @@ def preview_frame(mode, edge, measured, height, reverse=False, bearing=None):
     """Global placement of the bearing frame (origin on the axis at mid-height) that
     groove_body() / create_races() / convert_bearing() would use."""
     if bearing is not None:  # the standard bearing occupies z in [-B, 0]
-        return global_placement(bearing).multiply(App.Placement(App.Vector(0, 0, -height / 2), App.Rotation()))
+        return global_placement(bearing).multiply(
+            App.Placement(App.Vector(0, 0, -height / 2), App.Rotation())
+        )
     if mode == GROOVE:
         return frame_placement(edge, measured["mid"])
     face = frame_placement(edge) if edge is not None else App.Placement()
-    return face.multiply(App.Placement(App.Vector(0, 0, (-0.5 if reverse else 0.5) * height), App.Rotation()))
+    return face.multiply(
+        App.Placement(App.Vector(0, 0, (-0.5 if reverse else 0.5) * height), App.Rotation())
+    )
 
 
-def convert_bearing(bearing, cage=True, balls=False, values=None):
+def convert_bearing(bearing, values, cage=True, balls=False):
     """Build a printable bearing in place of a standard Bearing object, and hide it.
 
     The standard bearing occupies z in [-B, 0] of its placement, so the races are padded
-    along -Z from its frame. `values` override the defaults (ball size, cage options).
+    along -Z from its frame. ID, OD and Height come from the bearing; `values` gives the
+    rest (ball size and count, cage options; CAGE_DEFAULTS for any cage option missing).
     """
-    v = dict(CAGE_DEFAULTS, BallDiameter=DEFAULT_BALL_DIAMETER, NumBalls=DEFAULT_NUM_BALLS)
-    v.update(values or {})
-    v.update(ID=bearing.BoreDiameter.Value, OD=bearing.OuterDiameter.Value, Height=bearing.Width.Value)
-    v = fit_values(v, reset=not values)
+    v = dict(CAGE_DEFAULTS, **values)
+    v.update(
+        ID=bearing.BoreDiameter.Value, OD=bearing.OuterDiameter.Value, Height=bearing.Width.Value
+    )
     params = create_races(bearing.Document, global_placement(bearing), v, True, cage, balls)
     bearing.Visibility = False
     return params
@@ -803,14 +739,26 @@ class PrintableBearingCheck:
 
     def __init__(self, obj, params, follow_label, cage, balls):
         obj.Proxy = self
-        obj.addProperty("App::PropertyLinkGlobal", "Parameters", "Printable bearing",
-                        "BearingParameters datum this bearing is built from")
-        obj.addProperty("App::PropertyBool", "FollowPartLabel", "Printable bearing",
-                        "Keep the label of the App::Part this object is in equal to the bearing size")
+        obj.addProperty(
+            "App::PropertyLinkGlobal",
+            "Parameters",
+            "Printable bearing",
+            "BearingParameters datum this bearing is built from",
+        )
+        obj.addProperty(
+            "App::PropertyBool",
+            "FollowPartLabel",
+            "Printable bearing",
+            "Keep the label of the App::Part this object is in equal to the bearing size",
+        )
         obj.addProperty("App::PropertyBool", "HasCage", "Printable bearing", "A cage was built")
         obj.addProperty("App::PropertyBool", "HasBalls", "Printable bearing", "Balls were built")
-        obj.addProperty("App::PropertyString", "Designation", "Printable bearing",
-                        "Catalog bearing with the same ID x OD x Height, if any")
+        obj.addProperty(
+            "App::PropertyString",
+            "Designation",
+            "Printable bearing",
+            "Catalog bearing with the same ID x OD x Height, if any",
+        )
         for name in ("Parameters", "HasCage", "HasBalls", "Designation"):
             obj.setEditorMode(name, 1)
         obj.Parameters = params
@@ -821,6 +769,12 @@ class PrintableBearingCheck:
         self.auto_label = part.Label if part else None
 
     def execute(self, obj):
+        # Side effect: this sets the label of another object (the Part it sits in).
+        # Generally execute() should only change its own object, since writing others can
+        # retrigger recomputes. It is accepted here because a label change doesn't touch
+        # the Part or anything depending on it, and there is nowhere else to hook in:
+        # BearingParameters is a plain datum, so it has no onChanged() of ours. Don't copy
+        # this pattern for properties that do affect geometry.
         params = obj.Parameters
         if params is None:
             return

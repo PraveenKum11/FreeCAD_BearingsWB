@@ -1,0 +1,29 @@
+# Tool settings only: the workbench is installed by FreeCAD's Addon Manager, not pip.
+# Format and lint with Ruff (https://docs.astral.sh/ruff/):
+#     ruff format . && ruff check .
+
+[tool.ruff]
+line-length = 100
+# FreeCAD 1.0 (package.xml freecadmin) runs on Python 3.8 and later
+target-version = "py38"
+src = [".", "tests", "tests/gui"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # import order
+    "B",  # bugbear: likely bugs
+]
+
+[tool.ruff.lint.per-file-ignores]
+# FreeCAD injects Workbench and Gui into InitGui.py
+"InitGui.py" = ["F821"]
+# GUI scripts set up sys.path before importing the workbench
+"tests/gui/*.py" = ["E402"]
+# SVG markup is easier to read on one line
+"tools/make_icons.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["FreeCAD", "FreeCADGui", "Part", "Sketcher", "PySide", "PySide6", "pivy"]

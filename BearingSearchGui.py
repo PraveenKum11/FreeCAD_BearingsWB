@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Find a bearing by name, bore (ID), outside diameter (OD) or height, then insert it."""
 
 import FreeCAD as App
@@ -8,7 +8,7 @@ from PySide import QtCore, QtGui
 import BearingBase
 import BearingData as BD
 import BRselection as BRS
-from BRutils import icon, translate
+from BRutils import icon
 
 TITLE = "Find Bearing"
 COLUMNS = ["Designation", "Series", "ID", "OD", "Height", "Shielded H", "Flange"]
@@ -30,11 +30,11 @@ class SearchPanel:
 
         self.name = QtGui.QLineEdit()
         self.name.setPlaceholderText("608, F688-2RS, 62, MR105, 8x22x7 ...")
-        self.name.setToolTip(translate(
-            "Bearings",
+        self.name.setToolTip(
             "Designation or its start (62 lists all 62xx), with optional flange (F, MF) and "
             "closure (Z, ZZ, RS, 2RS) codes, which are used when inserting. A size such as "
-            "8x22 or 8x22x7 (ID x OD x height) also works."))
+            "8x22 or 8x22x7 (ID x OD x height) also works."
+        )
         form.addRow("Name:", self.name)
 
         def dim(tip):
@@ -46,16 +46,18 @@ class SearchPanel:
             s.setToolTip(tip)
             return s
 
-        self.d = dim(translate("Bearings", "Bore diameter (ID), i.e. the shaft size. 'Any' to ignore."))
-        self.D = dim(translate("Bearings", "Outside diameter (OD), i.e. the housing bore. 'Any' to ignore."))
-        self.B = dim(translate("Bearings", "Width / height B. Also matches the wider shielded "
-                                           "width of miniature bearings. 'Any' to ignore."))
+        self.d = dim("Bore diameter (ID), i.e. the shaft size. 'Any' to ignore.")
+        self.D = dim("Outside diameter (OD), i.e. the housing bore. 'Any' to ignore.")
+        self.B = dim(
+            "Width / height B. Also matches the wider shielded "
+            "width of miniature bearings. 'Any' to ignore."
+        )
         self.tol = QtGui.QDoubleSpinBox()
         self.tol.setRange(0, 100)
         self.tol.setDecimals(2)
         self.tol.setSuffix(" mm")
         self.tol.setPrefix("± ")
-        self.tol.setToolTip(translate("Bearings", "How far ID, OD and height may differ from the values entered."))
+        self.tol.setToolTip("How far ID, OD and height may differ from the values entered.")
         form.addRow("Inner diameter:", self.d)
         form.addRow("Outer diameter:", self.D)
         form.addRow("Height:", self.B)
@@ -74,12 +76,12 @@ class SearchPanel:
 
         buttons = QtGui.QHBoxLayout()
         self.insert_btn = QtGui.QPushButton(QtGui.QIcon(icon("Bearing_60.svg")), "Insert bearing")
-        self.insert_btn.setToolTip(translate(
-            "Bearings", "Insert the selected size as a standard bearing (attached to the edges "
-                        "selected before opening this panel, if any). Double-click a row does the same."))
+        self.insert_btn.setToolTip(
+            "Insert the selected size as a standard bearing (attached to the edges "
+            "selected before opening this panel, if any). Double-click a row does the same."
+        )
         self.print_btn = QtGui.QPushButton(QtGui.QIcon(icon("PrintableBearing.svg")), "Printable…")
-        self.print_btn.setToolTip(translate(
-            "Bearings", "Open the 3D-printable bearing panel with this size."))
+        self.print_btn.setToolTip("Open the 3D-printable bearing panel with this size.")
         buttons.addWidget(self.insert_btn)
         buttons.addWidget(self.print_btn)
         layout.addLayout(buttons)
@@ -96,8 +98,13 @@ class SearchPanel:
 
     def criteria(self):
         val = lambda s: s.value() or None  # noqa: E731 (0 = "Any")
-        return dict(name=self.name.text().strip() or None, d=val(self.d), D=val(self.D),
-                    B=val(self.B), tol=self.tol.value())
+        return dict(
+            name=self.name.text().strip() or None,
+            d=val(self.d),
+            D=val(self.D),
+            B=val(self.B),
+            tol=self.tol.value(),
+        )
 
     def update(self, *_):
         c = self.criteria()
@@ -107,15 +114,24 @@ class SearchPanel:
         self.table.setRowCount(len(self.results))
         for i, (series, r) in enumerate(self.results):
             shown = BD.full_designation(r, self.closure, self.flanged)
-            cells = [shown, series, _num(r.d), _num(r.D), _num(r.B), _num(r.B_shielded),
-                     "%gx%g" % (r.D1, r.C1) if r.has_flange else ""]
+            cells = [
+                shown,
+                series,
+                _num(r.d),
+                _num(r.D),
+                _num(r.B),
+                _num(r.B_shielded),
+                "%gx%g" % (r.D1, r.C1) if r.has_flange else "",
+            ]
             for j, text in enumerate(cells):
                 item = QtGui.QTableWidgetItem(text)
                 if j >= 2:
                     item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
                 self.table.setItem(i, j, item)
         self.table.resizeColumnsToContents()
-        self.count.setText("%d bearing%s" % (len(self.results), "" if len(self.results) == 1 else "s"))
+        self.count.setText(
+            "%d bearing%s" % (len(self.results), "" if len(self.results) == 1 else "s")
+        )
         if self.results:
             self.table.selectRow(0)
         self.update_buttons()
@@ -138,8 +154,14 @@ class SearchPanel:
         doc.openTransaction("Add bearing")
         created = []
         for target in self.edges or [None]:
-            obj = BearingBase.make_bearing(series, row.name, attach_to=target, doc=doc,
-                                           Closure=self.closure, Flanged=self.flanged)
+            obj = BearingBase.make_bearing(
+                series,
+                row.name,
+                attach_to=target,
+                doc=doc,
+                Closure=self.closure,
+                Flanged=self.flanged,
+            )
             created.append(obj)
         doc.commitTransaction()
         Gui.Selection.clearSelection()
@@ -175,12 +197,10 @@ class SearchCommand:
     def GetResources(self):
         return {
             "Pixmap": icon("BearingSearch.svg"),
-            "MenuText": translate("Bearings", "Find bearing"),
-            "ToolTip": translate(
-                "Bearings",
-                "Search bearings by name (608, F688-2RS, 62…), inner diameter, outer diameter "
-                "or height, and insert one.\nSelect circular edges first to attach the "
-                "inserted bearing to them."),
+            "MenuText": "Find bearing",
+            "ToolTip": "Search bearings by name (608, F688-2RS, 62…), inner diameter, "
+            "outer diameter or height, and insert one.\nSelect circular edges first to attach the "
+            "inserted bearing to them.",
         }
 
     def IsActive(self):

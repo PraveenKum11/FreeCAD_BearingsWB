@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Bearing tables: CSV loading, series registry, designation strings, auto-match.
 
 Tables hold only boundary dimensions (d, D, B, r) plus optional shielded width and
@@ -9,16 +9,16 @@ import csv
 import os
 import re
 
-from BRutils import dataPath, QT_TRANSLATE_NOOP
+from BRutils import dataPath
 
 # key -> (title, csv file, default designation, family)
 SERIES = {
-    "60": (QT_TRANSLATE_NOOP("Bearings", "Deep groove ball bearing, series 60"), "iso15_60.csv", "608", "deepgroove"),
-    "62": (QT_TRANSLATE_NOOP("Bearings", "Deep groove ball bearing, series 62"), "iso15_62.csv", "625", "deepgroove"),
-    "63": (QT_TRANSLATE_NOOP("Bearings", "Deep groove ball bearing, series 63"), "iso15_63.csv", "6300", "deepgroove"),
-    "68": (QT_TRANSLATE_NOOP("Bearings", "Thin deep groove ball bearing, series 68 (618)"), "iso15_68.csv", "688", "deepgroove"),
-    "69": (QT_TRANSLATE_NOOP("Bearings", "Thin deep groove ball bearing, series 69 (619)"), "iso15_69.csv", "695", "deepgroove"),
-    "MR": (QT_TRANSLATE_NOOP("Bearings", "Metric miniature ball bearing, MR"), "mr.csv", "MR105", "deepgroove"),
+    "60": ("Deep groove ball bearing, series 60", "iso15_60.csv", "608", "deepgroove"),
+    "62": ("Deep groove ball bearing, series 62", "iso15_62.csv", "625", "deepgroove"),
+    "63": ("Deep groove ball bearing, series 63", "iso15_63.csv", "6300", "deepgroove"),
+    "68": ("Thin deep groove ball bearing, series 68 (618)", "iso15_68.csv", "688", "deepgroove"),
+    "69": ("Thin deep groove ball bearing, series 69 (619)", "iso15_69.csv", "695", "deepgroove"),
+    "MR": ("Metric miniature ball bearing, MR", "mr.csv", "MR105", "deepgroove"),
 }
 
 CLOSURES = ["Open", "Z", "ZZ", "RS", "2RS"]
@@ -126,7 +126,9 @@ def best_match_kind(series, diameter):
 
 # ---------------------------------------------------------------- search
 
-_SIZE_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)(?:\s*[x×*]\s*(\d+(?:\.\d+)?))?\s*$", re.I)
+_SIZE_RE = re.compile(
+    r"^\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)(?:\s*[x×*]\s*(\d+(?:\.\d+)?))?\s*$", re.I
+)
 # closure codes at the end: 2RS / RS (SKF adds a digit: 2RS1), 2Z / ZZ / Z
 _CLOSURE_RE = re.compile(r"-?(?:(2RS|RS)\d?|(2Z|ZZ|Z))$", re.I)
 _CLOSURE_CODES = {"2RS": "2RS", "RS": "RS", "2Z": "ZZ", "ZZ": "ZZ", "Z": "Z"}
@@ -188,7 +190,9 @@ def search(name=None, d=None, D=None, B=None, tol=0.0):
                 continue
             if not (near(r.d, d) and near(r.D, D)):
                 continue
-            if B is not None and not (near(r.B, B) or (r.B_shielded is not None and near(r.B_shielded, B))):
+            if B is not None and not (
+                near(r.B, B) or (r.B_shielded is not None and near(r.B_shielded, B))
+            ):
                 continue
             hits.append((series, r))
     exact = [h for h in hits if name and h[1].name.upper() == name]

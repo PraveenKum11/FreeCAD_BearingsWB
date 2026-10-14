@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """GUI commands: one insert command per bearing series."""
 
 import FreeCAD
@@ -7,11 +7,7 @@ import FreeCADGui
 import BearingBase
 import BearingData as BD
 import BRselection
-from BRutils import icon, translate
-
-
-def _selected_circular_edges():
-    return [(obj, [sub]) for obj, sub in BRselection.selected_edges()]
+from BRutils import icon
 
 
 class InsertBearingCommand:
@@ -22,11 +18,9 @@ class InsertBearingCommand:
         title = BD.SERIES[self.series][0]
         return {
             "Pixmap": icon("Bearing_%s.svg" % self.series),
-            "MenuText": translate("Bearings", title),
-            "ToolTip": translate(
-                "Bearings",
-                "{}.\nSelect circular edges (hole or shaft end) first to attach and auto-size.",
-            ).format(translate("Bearings", title)),
+            "MenuText": title,
+            "ToolTip": title
+            + ".\nSelect circular edges (hole or shaft end) first to attach and auto-size.",
         }
 
     def IsActive(self):
@@ -35,7 +29,7 @@ class InsertBearingCommand:
     def Activated(self):
         doc = FreeCAD.ActiveDocument
         doc.openTransaction("Add bearing")
-        edges = _selected_circular_edges()
+        edges = [(obj, [sub]) for obj, sub in BRselection.selected_edges()]
         created = []
         if edges:
             for target in edges:

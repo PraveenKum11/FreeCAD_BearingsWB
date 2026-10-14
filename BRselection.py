@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Selection and edge geometry helpers shared by standard and printable bearings.
 
 Adapted from the DeepGrooveBallBearing macro. All edges and frames returned here are in
@@ -83,6 +83,7 @@ def frame_placement(edge, axial_offset=0.0):
     radial.normalize()
     y = axis.cross(radial)
 
+    # fmt: off
     return App.Placement(
         App.Matrix(
             radial.x, y.x, axis.x, origin.x,
@@ -91,6 +92,7 @@ def frame_placement(edge, axial_offset=0.0):
             0, 0, 0, 1,
         )
     )
+    # fmt: on
 
 
 def outward_normal(shape, edge):
@@ -102,7 +104,9 @@ def outward_normal(shape, edge):
         faces = shape.ancestorsOfType(edge, Part.Face)
     except Part.OCCError:
         # edge is not a sub-shape of `shape` (e.g. a copy): match faces by geometry
-        faces = [f for f in shape.Faces if any(e.isSame(edge) or _same_circle(e, edge) for e in f.Edges)]
+        faces = [
+            f for f in shape.Faces if any(e.isSame(edge) or _same_circle(e, edge) for e in f.Edges)
+        ]
     for face in faces:
         if isinstance(face.Surface, Part.Plane):
             u0, u1, v0, v1 = face.ParameterRange
@@ -113,8 +117,10 @@ def outward_normal(shape, edge):
 def _same_circle(a, b, tol=1e-6):
     if not (is_circular_edge(a) and is_circular_edge(b)):
         return False
-    return (abs(a.Curve.Radius - b.Curve.Radius) < tol
-            and (center_of(a.Curve) - center_of(b.Curve)).Length < tol)
+    return (
+        abs(a.Curve.Radius - b.Curve.Radius) < tol
+        and (center_of(a.Curve) - center_of(b.Curve)).Length < tol
+    )
 
 
 def coaxial_cylinders(solid, edge):
@@ -171,7 +177,7 @@ def nearest_solid(shape, edge):
 
 
 def edge_side(shape, edge):
-    """"outside" (a bore / hole), "inside" (a shaft / outer surface) or None."""
+    """ "outside" (a bore / hole), "inside" (a shaft / outer surface) or None."""
     if shape is None or not shape.Solids:
         return None
     return cylinder_side(nearest_solid(shape, edge), edge)[0]

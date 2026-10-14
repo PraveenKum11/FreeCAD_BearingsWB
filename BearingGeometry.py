@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Computed internals and Part shapes for rolling bearings.
 
 Local frame: bearing axis is +Z, the bearing occupies z in [-B, 0] and the flange
@@ -16,13 +16,66 @@ V = FreeCAD.Vector
 DETAIL_LEVELS = ["Envelope", "Standard", "Detailed"]
 
 # ISO 3290 metric balls plus common inch fractions, mm
-STANDARD_BALLS = sorted({
-    0.3, 0.4, 0.5, 0.6, 0.635, 0.7, 0.8, 1.0, 1.2, 1.5, 1.588, 2.0, 2.381, 2.5, 3.0,
-    3.175, 3.5, 3.969, 4.0, 4.5, 4.762, 5.0, 5.556, 6.0, 6.35, 7.0, 7.144, 7.938, 8.0,
-    8.731, 9.0, 9.525, 10.0, 11.112, 11.906, 12.0, 12.7, 13.494, 14.0, 14.288, 15.081,
-    15.875, 16.0, 16.669, 17.462, 18.0, 19.05, 20.0, 20.638, 22.225, 23.812, 25.4,
-    26.988, 28.575, 30.0, 31.75,
-})
+STANDARD_BALLS = sorted(
+    {
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.635,
+        0.7,
+        0.8,
+        1.0,
+        1.2,
+        1.5,
+        1.588,
+        2.0,
+        2.381,
+        2.5,
+        3.0,
+        3.175,
+        3.5,
+        3.969,
+        4.0,
+        4.5,
+        4.762,
+        5.0,
+        5.556,
+        6.0,
+        6.35,
+        7.0,
+        7.144,
+        7.938,
+        8.0,
+        8.731,
+        9.0,
+        9.525,
+        10.0,
+        11.112,
+        11.906,
+        12.0,
+        12.7,
+        13.494,
+        14.0,
+        14.288,
+        15.081,
+        15.875,
+        16.0,
+        16.669,
+        17.462,
+        18.0,
+        19.05,
+        20.0,
+        20.638,
+        22.225,
+        23.812,
+        25.4,
+        26.988,
+        28.575,
+        30.0,
+        31.75,
+    }
+)
 
 COLOR_STEEL = (0.76, 0.77, 0.80)
 COLOR_BALL = (0.86, 0.87, 0.90)
@@ -122,13 +175,16 @@ def _profile_face(items):
     return Part.Face(Part.Wire(edges))
 
 
-def _revolve(items):
+def revolve(items):
+    """Solid of revolution about Z of a _profile_face() profile in the XZ plane."""
     face = _profile_face(items)
     return Part.Solid(face.revolve(V(0, 0, 0), V(0, 0, 1), 360))
 
 
 def _annulus(x_in, x_out, z0, z1):
-    return _revolve([("p", x_in, z0, 0), ("p", x_out, z0, 0), ("p", x_out, z1, 0), ("p", x_in, z1, 0)])
+    return revolve(
+        [("p", x_in, z0, 0), ("p", x_out, z0, 0), ("p", x_out, z1, 0), ("p", x_in, z1, 0)]
+    )
 
 
 def _outer_top(row, flanged, r):
@@ -146,7 +202,7 @@ def make_envelope(row, closure, flanged):
     items = [("p", row.d / 2, -B, r), ("p", row.D / 2, -B, r)]
     items += _outer_top(row, flanged, r)
     items += [("p", row.d / 2, 0, r)]
-    return [(_revolve(items), COLOR_STEEL)]
+    return [(revolve(items), COLOR_STEEL)]
 
 
 def make_deep_groove(row, closure, flanged, detail):
@@ -167,17 +223,23 @@ def make_deep_groove(row, closure, flanged, detail):
 
     # inner ring with raceway
     xc_in = dm / 2 - Dw / 2 + ins.r_groove_in
-    h_in = math.sqrt(ins.r_groove_in ** 2 - (xc_in - xs) ** 2)
+    h_in = math.sqrt(ins.r_groove_in**2 - (xc_in - xs) ** 2)
     rb = min(r, 0.4 * (xs - row.d / 2))
-    inner = _revolve([
-        ("p", row.d / 2, -B, rb), ("p", xs, -B, 0),
-        ("p", xs, zc - h_in, 0), ("a", dm / 2 - Dw / 2, zc), ("p", xs, zc + h_in, 0),
-        ("p", xs, 0, 0), ("p", row.d / 2, 0, rb),
-    ])
+    inner = revolve(
+        [
+            ("p", row.d / 2, -B, rb),
+            ("p", xs, -B, 0),
+            ("p", xs, zc - h_in, 0),
+            ("a", dm / 2 - Dw / 2, zc),
+            ("p", xs, zc + h_in, 0),
+            ("p", xs, 0, 0),
+            ("p", row.d / 2, 0, rb),
+        ]
+    )
 
     # outer ring with raceway and shield seats
     xc_out = dm / 2 + Dw / 2 - ins.r_groove_out
-    h_out = math.sqrt(ins.r_groove_out ** 2 - (xl - xc_out) ** 2)
+    h_out = math.sqrt(ins.r_groove_out**2 - (xl - xc_out) ** 2)
     ro = min(r, 0.4 * (row.D / 2 - xl - rec))
     items = [("p", xl + rec if bottom else xl, -B, 0), ("p", row.D / 2, -B, ro)]
     items += _outer_top(row, flanged, ro)
@@ -188,7 +250,7 @@ def make_deep_groove(row, closure, flanged, detail):
     items += [("p", xl, zc + h_out, 0), ("a", dm / 2 + Dw / 2, zc), ("p", xl, zc - h_out, 0)]
     if bottom:
         items += [("p", xl, -B + sd, 0), ("p", xl + rec, -B + sd, 0)]
-    outer = _revolve(items)
+    outer = revolve(items)
 
     parts = [(inner, COLOR_STEEL), (outer, COLOR_STEEL)]
 
@@ -215,8 +277,14 @@ def make_deep_groove(row, closure, flanged, detail):
     if detail == "Detailed":
         wc = min(1.3 * Dw, B - 2 * sd - 0.1 * B)
         x0, x1 = dm / 2 - 0.1 * Dw, dm / 2 + 0.1 * Dw
-        face = _profile_face([("p", x0, zc - wc / 2, 0), ("p", x1, zc - wc / 2, 0),
-                              ("p", x1, zc + wc / 2, 0), ("p", x0, zc + wc / 2, 0)])
+        face = _profile_face(
+            [
+                ("p", x0, zc - wc / 2, 0),
+                ("p", x1, zc - wc / 2, 0),
+                ("p", x1, zc + wc / 2, 0),
+                ("p", x0, zc + wc / 2, 0),
+            ]
+        )
         face.rotate(V(0, 0, 0), V(0, 0, 1), -180.0 / ins.Z)
         segment = Part.Solid(face.revolve(V(0, 0, 0), V(0, 0, 1), 360.0 / ins.Z))
         segment = segment.cut(Part.makeSphere(0.52 * Dw, V(dm / 2, 0, zc)))
