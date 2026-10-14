@@ -679,8 +679,7 @@ class PrintableBearingCommand:
             "Pixmap": icon("PrintableBearing.svg"),
             "MenuText": "3D-printable bearing",
             "ToolTip": "3D-printable deep groove ball bearing: races, snap-in cage and balls as "
-            "separate PartDesign bodies.\nSelect a circular edge (shaft end, housing bore "
-            "or a bore to groove), a standard bearing to replace, or nothing.",
+            "separate PartDesign bodies",
         }
 
     def IsActive(self):

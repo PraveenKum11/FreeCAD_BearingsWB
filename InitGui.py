@@ -21,6 +21,14 @@ class BearingsWorkbench(Workbench):
             self.appendMenu(["Bearings", title], commands)
         self.appendMenu("Bearings", ["Separator"] + tools)
 
+    def Activated(self):
+        from PySide import QtCore
+
+        import BearingsCmd
+
+        # after FreeCAD has built the toolbars
+        QtCore.QTimer.singleShot(0, BearingsCmd.fix_group_tooltips)
+
     def GetClassName(self):
         return "Gui::PythonWorkbench"
 

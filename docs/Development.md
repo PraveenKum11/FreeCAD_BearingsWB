@@ -30,7 +30,7 @@ panels in a real FreeCAD window and closes it by itself.
 
 ```sh
 ruff format . && ruff check .
-python3 tools/make_icons.py
+path/to/freecadcmd tools/make_icons.py        # Icons/*.svg
 path/to/FreeCAD tools/render_images.py        # README and wiki images
 RENDER_ONLY=hero,closures path/to/FreeCAD tools/render_images.py
 ```
@@ -41,6 +41,6 @@ RENDER_ONLY=hero,closures path/to/FreeCAD tools/render_images.py
    `BearingData.DERIVED`).
 2. Register the series in `BearingData.SERIES`, and its family's row class if it is new.
 3. Add the shape builder in `BearingGeometry.py` if the family is new.
-4. Put the series in a toolbar group (`BearingsCmd.GROUPS`) and give it an icon
-   (`tools/make_icons.py`).
+4. Put the series in a toolbar group (`BearingsCmd.GROUPS`) and regenerate the icons
+   (`tools/make_icons.py` draws one for every series in `BearingData.SERIES`).
 5. The tests pick up every row automatically.

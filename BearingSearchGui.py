@@ -204,8 +204,7 @@ class SearchCommand:
             "Pixmap": icon("BearingSearch.svg"),
             "MenuText": "Find bearing",
             "ToolTip": "Search bearings by name (608, F688-2RS, 62…), inner diameter, "
-            "outer diameter or height, and insert one.\nSelect circular edges first to attach the "
-            "inserted bearing to them.",
+            "outer diameter or height, and insert one",
         }
 
     def IsActive(self):

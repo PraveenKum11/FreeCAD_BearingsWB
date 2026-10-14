@@ -22,9 +22,8 @@ class InsertBearingCommand:
         title = BD.SERIES[self.series][0]
         return {
             "Pixmap": icon("Bearing_%s.svg" % self.series),
-            "MenuText": title,
-            "ToolTip": title
-            + ".\nSelect circular edges (hole or shaft end) first to attach and auto-size.",
+            "MenuText": "Add " + title[0].lower() + title[1:],
+            "ToolTip": title,
         }
 
     def IsActive(self):
@@ -76,6 +75,25 @@ GROUPS = [
     ("Bearings_Thrust", "Thrust bearings", ["511", "AXK"]),
     ("Bearings_Linear", "Linear bushings", ["LM"]),
 ]
+
+
+def fix_group_tooltips():
+    """Give each drop-down button the tooltip of its default command.
+
+    FreeCAD wraps a Python group command's first tooltip twice (the group title, then the
+    group title again around the default command's tooltip). Once an entry is picked from
+    the drop-down it uses that entry's own tooltip; do the same from the start."""
+    from PySide import QtWidgets
+
+    groups = {title: name for name, title, _ in GROUPS}
+    for bar in FreeCADGui.getMainWindow().findChildren(QtWidgets.QToolBar):
+        for action in bar.actions():
+            name = groups.get(action.text())
+            if name:
+                children = FreeCADGui.Command.get(name).getAction()
+                if children:
+                    action.setToolTip(children[0].toolTip())
+
 
 COMMANDS = []  # every insert command, in series order
 for _series in BD.SERIES:

@@ -317,9 +317,9 @@ Code style uses [Ruff](https://docs.astral.sh/ruff/), configured in `pyproject.t
 ruff format . && ruff check .
 ```
 
-`python3 tools/make_icons.py` regenerates `Icons/*.svg`. `path/to/FreeCAD
-tools/render_images.py` regenerates the images in this README from the workbench's own
-code (it needs the FreeCAD GUI, not `freecadcmd`).
+`path/to/freecadcmd tools/make_icons.py` regenerates `Icons/*.svg` from the workbench's
+own shapes. `path/to/FreeCAD tools/render_images.py` regenerates the images in this README
+from the workbench's own code (it needs the FreeCAD GUI, not `freecadcmd`).
 
 ## License
 
