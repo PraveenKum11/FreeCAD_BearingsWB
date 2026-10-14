@@ -20,6 +20,14 @@ class Values(unittest.TestCase):
             PB.catalog_match({"ID": 8, "OD": 16, "Height": 5}), "688", "shielded width (688ZZ)"
         )
 
+    def test_catalog_has_ball_bearings_only(self):
+        names = [r[0] for r in PB.catalog_rows()]
+        self.assertIn("R188", names, "inch sizes are offered")
+        self.assertFalse([n for n in names if n.startswith("LM")], "no linear bushings")
+        self.assertIsNone(
+            PB.catalog_match({"ID": 8, "OD": 15, "Height": 24}), "LM8UU is not a match"
+        )
+
     def test_other_diameter(self):
         self.assertEqual(PB.other_diameter(30, True), 45, "ID 30 -> OD 45")
         self.assertEqual(PB.other_diameter(22, False), 7, "OD 22 -> ID 7")

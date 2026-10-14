@@ -113,10 +113,15 @@ BALL_PRESETS = [
 ]
 
 
+def ball_bearing_series():
+    """Series a printable deep groove bearing can take its size from (not linear bushings)."""
+    return [s for s in BD.SERIES if BD.family(s) == "deepgroove"]
+
+
 def catalog_rows():
     """Every catalog size once, (designation, d, D, B) sorted by bore then OD."""
     seen, rows = set(), []
-    for series in BD.SERIES:
+    for series in ball_bearing_series():
         for r in BD.load_table(series):
             if (r.d, r.D, r.B) not in seen:
                 seen.add((r.d, r.D, r.B))
@@ -129,7 +134,7 @@ def catalog_match(values, tol=1e-6):
 
     The height may be the open or the shielded width (688 is 4 mm open, 5 mm as 688ZZ).
     """
-    for series in BD.SERIES:
+    for series in ball_bearing_series():
         for r in BD.load_table(series):
             if abs(values["ID"] - r.d) >= tol or abs(values["OD"] - r.D) >= tol:
                 continue

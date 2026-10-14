@@ -4,6 +4,10 @@
 Local frame: bearing axis is +Z, the bearing occupies z in [-B, 0] and the flange
 (if any) sits at z in [-C1, 0]. Rings are made by revolving 2D profiles that already
 contain the raceway grooves, so only the cage needs a boolean.
+
+Linear ball bushings use the same frame (length B along Z, flange at the top end). Their
+sleeve is a revolved profile too; only a square flange and the flange bolt holes need
+booleans.
 """
 
 import math
@@ -297,15 +301,122 @@ def make_deep_groove(row, closure, flanged, detail):
     return parts
 
 
+# ---------------------------------------------------------------- linear bushings
+
+
+class LinearInternals:
+    """Ball rows of a linear bushing (simplified: one straight row of balls per circuit,
+    touching the shaft, between the seals). Same attribute names as Internals."""
+
+    def __init__(self, row):
+        wall = (row.D - row.d) / 2
+        fitting = [b for b in STANDARD_BALLS if b <= 0.45 * wall + 1e-9]
+        self.Dw = fitting[-1] if fitting else round(0.45 * wall, 3)
+        self.dm = row.d + self.Dw  # diameter through the ball centers
+        self.seal = min(max(0.06 * row.B, 0.8), 2.5)  # seal thickness at each end
+        self.sleeve_bore = row.d / 2 + 1.05 * self.Dw  # radius
+        self.pitch = 1.02 * self.Dw  # balls in a row don't touch
+        self.per_row = max(1, int((row.B - 2 * self.seal - 0.2) / self.pitch))
+        self.rows = row.rows
+        self.Z = self.rows * self.per_row
+
+
+def internals(row):
+    """Internals of a deep groove bearing or a linear bushing."""
+    return (
+        LinearInternals(row) if getattr(row, "is_linear", False) else Internals(row.d, row.D, row.B)
+    )
+
+
+def _sleeve_profile(row, flanged, bore):
+    """Revolve profile of a linear bushing sleeve: retaining ring grooves on a plain
+    bushing, a round flange (D1 x C1, at the top) on a flanged one."""
+    L, R = row.B, row.D / 2
+    items = [("p", bore, -L, 0), ("p", R, -L, 0)]
+    if flanged:
+        items += [("p", R, -row.C1, 0), ("p", row.D1 / 2, -row.C1, 0), ("p", row.D1 / 2, 0, 0)]
+    else:
+        if row.groove_B:
+            zc, Rg, W = -L / 2, row.groove_D / 2, row.groove_W
+            for z0 in (zc - row.groove_B / 2, zc + row.groove_B / 2 - W):
+                items += [
+                    ("p", R, z0, 0),
+                    ("p", Rg, z0, 0),
+                    ("p", Rg, z0 + W, 0),
+                    ("p", R, z0 + W, 0),
+                ]
+        items += [("p", R, 0, 0)]
+    items += [("p", bore, 0, 0)]
+    return items
+
+
+def _linear_sleeve(row, flanged, shape, bore):
+    sleeve = revolve(_sleeve_profile(row, flanged and shape == "Round", bore))
+    if not flanged:
+        return sleeve
+    if shape == "Square":
+        # square flange K x K, corners trimmed to the round flange diameter D1
+        K, H = row.K, row.C1
+        plate = Part.makeBox(K, K, H, V(-K / 2, -K / 2, -H))
+        plate = plate.common(Part.makeCylinder(row.D1 / 2, H, V(0, 0, -H)))
+        plate = plate.cut(Part.makeCylinder(bore, H, V(0, 0, -H)))
+        sleeve = sleeve.fuse(plate).removeSplitter()
+    # four counterbored bolt holes on the bolt circle, on the diagonals
+    d1, d2, h = row.hole
+    H = row.C1
+    holes = []
+    for k in range(4):
+        a = math.radians(45 + 90 * k)
+        c = V(row.pcd / 2 * math.cos(a), row.pcd / 2 * math.sin(a), 0)
+        holes.append(Part.makeCylinder(d1 / 2, H + 0.2, c + V(0, 0, -H - 0.1)))
+        holes.append(Part.makeCylinder(d2 / 2, h + 0.1, c + V(0, 0, -h)))
+    sleeve = sleeve.cut(Part.makeCompound(holes))
+    return Part.Solid(sleeve.Solids[0]) if sleeve.Solids else sleeve
+
+
+def make_linear(row, flanged, shape, detail):
+    """Return a list of (solid, rgb) for a linear ball bushing.
+
+    Envelope: the sleeve alone, bore = shaft. Standard and Detailed: the sleeve, a rubber
+    seal at each end and the rows of balls running on the shaft.
+    """
+    if detail == "Envelope":
+        return [(_linear_sleeve(row, flanged, shape, row.d / 2), COLOR_STEEL)]
+    ins = LinearInternals(row)
+    L, t = row.B, ins.seal
+    parts = [(_linear_sleeve(row, flanged, shape, ins.sleeve_bore), COLOR_STEEL)]
+    for z0 in (-L, -t):
+        parts.append((_annulus(row.d / 2, ins.sleeve_bore, z0, z0 + t), COLOR_SEAL))
+    rc = ins.dm / 2
+    used = ins.per_row * ins.pitch
+    z_first = -L / 2 - used / 2 + ins.pitch / 2
+    ball = Part.makeSphere(ins.Dw / 2, V(rc, 0, z_first))
+    for k in range(ins.rows):
+        for i in range(ins.per_row):
+            b = ball.copy()
+            b.translate(V(0, 0, i * ins.pitch))
+            b.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.rows)
+            parts.append((b, COLOR_BALL))
+    return parts
+
+
 _shape_cache = {}
 
 
-def build(row, closure, flanged, detail):
-    """Return (shape, face_colors) for a table row. Results are cached."""
+def build(row, closure, flanged, detail, flange_shape="Round"):
+    """Return (shape, face_colors) for a table row. Results are cached.
+
+    `flange_shape` ("Round" or "Square") applies to flanged linear bushings only."""
     flanged = bool(flanged and row.has_flange)
+    linear = getattr(row, "is_linear", False)
     key = (row.name, row.d, row.D, row.B, row.B_shielded, row.D1, row.C1, closure, flanged, detail)
+    if linear:
+        key += (flange_shape,)
     if key not in _shape_cache:
-        parts = make_deep_groove(row, closure, flanged, detail)
+        if linear:
+            parts = make_linear(row, flanged, flange_shape, detail)
+        else:
+            parts = make_deep_groove(row, closure, flanged, detail)
         if len(parts) == 1:
             shape = parts[0][0]
         else:

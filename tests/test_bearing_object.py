@@ -204,3 +204,79 @@ class NestedAttach(DocumentTest):
 
     def test_feature(self):
         self.check_target(self.hole, self.edge)
+
+
+class LinearBushings(DocumentTest):
+    def test_shaft_and_housing(self):
+        shaft = self.doc.addObject("Part::Feature", "Shaft")
+        shaft.Shape = Part.makeCylinder(4, 60, V(50, 0, 0))
+        plate = plate_with_hole(self.doc, 15.0)
+        self.doc.recompute()
+        on_shaft = BearingBase.make_bearing(
+            "LM", attach_to=(shaft, [find_circle(shaft, 4, 60)]), doc=self.doc
+        )
+        in_hole = BearingBase.make_bearing(
+            "LM", attach_to=(plate, [find_circle(plate, 7.5, 10)]), doc=self.doc
+        )
+        self.assertEqual((on_shaft.MatchTo, on_shaft.FullDesignation), ("Shaft", "LM8UU"))
+        self.assertEqual((in_hole.MatchTo, in_hole.FullDesignation), ("Housing", "LM8UU"))
+        bb = tight_bb(on_shaft.Shape)
+        self.assertTrue(close(bb.ZMax, 60, 0.01) and close(bb.ZMin, 36, 0.01), (bb.ZMin, bb.ZMax))
+        self.assertTrue(close(in_hole.Width.Value, 24) and in_hole.BallCount > 0)
+
+    def test_flanged_rests_on_the_face(self):
+        """In a hole, the flange sits on the face and only the body goes in."""
+        plate = plate_with_hole(self.doc, 15.0)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "LM",
+            "LM8UU",
+            attach_to=(plate, [find_circle(plate, 7.5, 10)]),
+            doc=self.doc,
+            Flanged=True,
+            FlangeShape="Square",
+        )
+        self.assertEqual(b.FullDesignation, "LMK8UU")
+        self.assertEqual(b.Label, "LMK8UU")
+        bb = tight_bb(b.Shape)
+        self.assertTrue(close(bb.ZMax, 15, 0.01) and close(bb.ZMin, -9, 0.01), (bb.ZMin, bb.ZMax))
+        self.assertTrue(close(bb.XLength, 25, 0.01), "square flange 25 mm")
+        self.assertLess(b.Shape.common(plate.Shape).Volume, 1e-3, "bushing intersects the plate")
+
+    def test_flanged_ball_bearing_rests_on_the_face(self):
+        plate = plate_with_hole(self.doc, 16.0)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "68", "688", attach_to=(plate, [find_circle(plate, 8, 10)]), doc=self.doc, Flanged=True
+        )
+        bb = tight_bb(b.Shape)
+        self.assertTrue(close(bb.ZMax, 11, 0.01) and close(bb.ZMin, 7, 0.01), (bb.ZMin, bb.ZMax))
+
+    def test_editor_modes_follow_the_family(self):
+        b = BearingBase.make_bearing("60", "608", doc=self.doc)
+        self.assertIn("Hidden", b.getEditorMode("FlangeShape"))
+        self.assertNotIn("Hidden", b.getEditorMode("Closure"))
+        b.Series = "LM"
+        self.doc.recompute()
+        self.assertEqual(b.FullDesignation, "LM8UU", "Series change picks the LM default")
+        self.assertNotIn("Hidden", b.getEditorMode("FlangeShape"))
+        self.assertIn("Hidden", b.getEditorMode("Closure"))
+
+    def test_old_document_gets_flange_shape(self):
+        b = BearingBase.make_bearing("60", "608", doc=self.doc)
+        b.removeProperty("FlangeShape")  # as saved before linear bushings existed
+        name = b.Name
+        doc = self.reopen()
+        b = doc.getObject(name)
+        self.assertEqual(b.FlangeShape, "Round")
+        b.touch()
+        doc.recompute()
+        self.assertFalse(is_invalid(b))
+
+
+class InchBearings(DocumentTest):
+    def test_fr188(self):
+        b = BearingBase.make_bearing("R", "R188", doc=self.doc, Flanged=True, Closure="ZZ")
+        self.assertEqual(b.FullDesignation, "FR188ZZ")
+        self.assertTrue(close(b.Width.Value, 4.762), b.Width.Value)
+        self.assertTrue(close(tight_bb(b.Shape).XLength, 13.894, 0.01), "flange diameter")

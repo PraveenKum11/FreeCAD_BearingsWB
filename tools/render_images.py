@@ -97,11 +97,18 @@ def quarter(center=None, size=200):
     return big_box(center.x, center.y - size, -size, center.x + size, center.y, size)
 
 
-def standard_parts(series, name, closure="Open", flanged=False, detail="Standard", pl=None):
-    """[(solid, rgb)] of a standard bearing, as the workbench colors it."""
+def standard_parts(
+    series, name, closure="Open", flanged=False, detail="Standard", pl=None, shape="Round"
+):
+    """[(solid, rgb)] of a standard bearing or linear bushing, as the workbench colors it."""
     row = BD.get_row(series, name)
     out = []
-    for solid, rgb in BG.make_deep_groove(row, closure, flanged and row.has_flange, detail):
+    flanged = flanged and row.has_flange
+    if BD.is_linear(row):
+        made = BG.make_linear(row, flanged, shape, detail)
+    else:
+        made = BG.make_deep_groove(row, closure, flanged, detail)
+    for solid, rgb in made:
         s = solid.copy()
         if pl is not None:
             s.Placement = pl.multiply(s.Placement)
@@ -360,6 +367,28 @@ def closures():
         )
         imgs.append((img, caption))
     panels(imgs, "closures.png", cell_w=300, same_crop=False)
+
+
+def linear_bushings():
+    """LM8UU, LM8LUU, LMF8UU and LMK8UU, cut away, standing on end."""
+    cases = [
+        ("LM8UU", False, "Round", "LM8UU"),
+        ("LM8LUU", False, "Round", "LM8LUU (long)"),
+        ("LM8UU", True, "Round", "LMF8UU (round flange)"),
+        ("LM8UU", True, "Square", "LMK8UU (square flange)"),
+    ]
+    items, captions, x = [], [], 0.0
+    for name, flanged, shape, caption in cases:
+        row = BD.get_row("LM", name)
+        w = (row.K if shape == "Square" else row.D1) if flanged else row.D
+        x += w / 2
+        pl = App.Placement(V(x, 0, 0), App.Rotation())
+        parts = standard_parts("LM", name, flanged=flanged, pl=pl, shape=shape)
+        items += cut_all(parts, quarter(V(x, 0, 0)))
+        captions.append((caption, (x, 0, 0)))
+        x += w / 2 + 12
+    img, proj, _ = render(items, direction=(0, 1, -0.55), scale=3, outlines=False)
+    row_with_captions(img, proj, captions, "linear-bushings.png", 1800, font_size=34)
 
 
 def edge_snap():
@@ -687,6 +716,7 @@ STEPS = (
     hero,
     detail_levels,
     closures,
+    linear_bushings,
     edge_snap,
     printable_parts_exploded,
     groove_body,

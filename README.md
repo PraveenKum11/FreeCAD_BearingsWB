@@ -1,7 +1,7 @@
 # Bearings Workbench for FreeCAD
 
 Parametric rolling bearings for FreeCAD, made for makers. Click a hole or a shaft and get
-a correctly sized **608**, **625**, **688** or **MR105** that stays attached to it, or
+a correctly sized **608**, **625**, **R188** or **LM8UU** that stays attached to it, or
 design a fully parametric **3D-printable bearing** with races, a snap-in cage and balls.
 
 <p align="center">
@@ -11,8 +11,9 @@ design a fully parametric **3D-printable bearing** with races, a snap-in cage an
 Tested with FreeCAD 1.1. Inspired by
 [FreeCAD_FastenersWB](https://github.com/shaise/FreeCAD_FastenersWB).
 
-- **Standard bearings**: deep groove series 60, 62, 63, 68, 69 and MR miniatures, with
-  shields, seals and flanges, sized automatically from the edge you click.
+- **Standard bearings**: deep groove series 60, 62, 63, 68, 69, MR miniatures and inch
+  R sizes, with shields, seals and flanges, sized automatically from the edge you click.
+- **Linear bushings**: LM8UU and friends, long, round-flanged and square-flanged.
 - **Find bearing**: search by name, bore, outside diameter or height.
 - **3D-printable bearings**: races, a snap-in cage and balls as separate PartDesign
   bodies, with a live preview while you set them up.
@@ -20,7 +21,7 @@ Tested with FreeCAD 1.1. Inspired by
 ## Standard bearings
 
 Pick a series on the **Bearings** toolbar. You get a maker-friendly default (608, 625,
-6300, 688, 695, MR105), and every option is a property you can change later.
+6300, 688, 695, MR105, R188), and every option is a property you can change later.
 
 | Series | What it is | Example |
 |---|---|---|
@@ -30,12 +31,13 @@ Pick a series on the **Bearings** toolbar. You get a maker-friendly default (608
 | **68** (618) | Thin section | 688 (8 × 16 × 4) |
 | **69** (619) | Thin section | 695 |
 | **MR** | Metric miniature | MR105 (5 × 10 × 3) |
+| **R** | Inch miniature | R188 (1/4" × 1/2" × 1/8"), fidget spinners and RC; FR188 flanged |
 
 ### Closures and flanges
 
 **Open**, **Z** / **ZZ** (metal shields) and **RS** / **2RS** (rubber seals), with the wider
 shielded width of miniature bearings where it differs (688 is 4 mm open, 5 mm as 688ZZ).
-Miniature sizes also come **flanged** (F688, MF105).
+Miniature sizes also come **flanged** (F688, MF105, FR188).
 
 <p align="center">
   <img src="images/closures.png" width="860" alt="608 open, 608ZZ, 608-2RS and flanged F688ZZ">
@@ -70,13 +72,29 @@ The tables hold only the standard boundary dimensions (ISO 15). Ball size, ball 
 raceways are computed, so the shapes are representative, not a copy of one maker's
 drawing.
 
+## Linear bushings
+
+The **LM** button inserts linear ball bushings for smooth rods: **LM8UU** (8 × 15 × 24, the
+3D-printer classic), the long **LM8LUU**, and the flanged **LMF8UU** (round) and
+**LMK8UU** (square), with counterbored bolt holes. Sizes run from LM5UU to LM60UU. Turn
+on `Flanged` and pick a `FlangeShape`.
+
+<p align="center">
+  <img src="images/linear-bushings.png" width="860" alt="LM8UU, LM8LUU, LMF8UU and LMK8UU cut away, showing the seals and the rows of balls">
+</p>
+
+They snap like bearings: select a rod end and the bushing slides onto it, or select a
+hole and it goes in. A flanged bushing (or flanged ball bearing) in a hole rests its
+flange on the face, with only the body in the hole. Plain bushings have their retaining
+ring grooves; **Standard** detail adds the seals and the rows of balls running on the rod.
+
 ## Find bearing
 
 **Bearing tools → Find bearing** searches the catalog by any combination of:
 
 - **Name**, or the start of one: `608`, `62` (all 62xx), `F688-2RS`, `MF105ZZ`, `6204-2RS1`,
-  SKF-style `618/8`, or a size such as `8x22` or `8x22x7`. Flange and closure codes in the
-  name are used when inserting.
+  SKF-style `618/8`, `FR188ZZ`, `LMK8UU`, or a size such as `8x22` or `8x22x7`. Flange
+  and closure codes in the name are used when inserting.
 - **Inner diameter**, **outer diameter** and **height**, with a ± tolerance. The height
   also matches the shielded width.
 
@@ -192,8 +210,9 @@ b = BearingBase.make_bearing("60", "608", Closure="2RS", DetailLevel="Detailed")
 
 ## Data accuracy
 
-Boundary dimensions of series 60, 62, 63, 68 and 69 were cross-checked against SKF's
-public table (see [PLAN.md](PLAN.md) §4.1). Shielded widths and flange dimensions of
+Boundary dimensions of series 60, 62, 63, 68, 69 and the inch R sizes were cross-checked
+against SKF's public table, and the LM bushings against two makers' public tables (see
+[PLAN.md](PLAN.md) §4.1). Shielded widths and flange dimensions of
 miniature bearings vary by vendor and are approximate: check `BRData/*.csv` against your
 supplier's sheet before relying on them for tight fits.
 

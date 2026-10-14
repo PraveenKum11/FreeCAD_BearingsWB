@@ -29,11 +29,11 @@ class SearchPanel:
         layout.addLayout(form)
 
         self.name = QtGui.QLineEdit()
-        self.name.setPlaceholderText("608, F688-2RS, 62, MR105, 8x22x7 ...")
+        self.name.setPlaceholderText("608, F688-2RS, FR188, LMK8UU, 8x22x7 ...")
         self.name.setToolTip(
-            "Designation or its start (62 lists all 62xx), with optional flange (F, MF) and "
-            "closure (Z, ZZ, RS, 2RS) codes, which are used when inserting. A size such as "
-            "8x22 or 8x22x7 (ID x OD x height) also works."
+            "Designation or its start (62 lists all 62xx), with optional flange (F, MF, FR; "
+            "LMF / LMK for linear bushings) and closure (Z, ZZ, RS, 2RS) codes, which are "
+            "used when inserting. A size such as 8x22 or 8x22x7 (ID x OD x height) also works."
         )
         form.addRow("Name:", self.name)
 
@@ -110,10 +110,12 @@ class SearchPanel:
         c = self.criteria()
         self.results = BD.search(**c)  # no criteria: the whole catalog
         _, closure, flanged = BD.parse_designation(c["name"]) if c["name"] else (None, None, False)
-        self.closure, self.flanged = closure or "Open", flanged
+        self.closure, self.flanged = closure or "Open", bool(flanged)
+        # linear bushings: parse_designation returns the flange shape (LMF / LMK)
+        self.flange_shape = flanged if flanged in BD.FLANGE_SHAPES else "Round"
         self.table.setRowCount(len(self.results))
         for i, (series, r) in enumerate(self.results):
-            shown = BD.full_designation(r, self.closure, self.flanged)
+            shown = BD.full_designation(r, self.closure, self.flanged, self.flange_shape)
             cells = [
                 shown,
                 series,
@@ -137,9 +139,11 @@ class SearchPanel:
         self.update_buttons()
 
     def update_buttons(self):
-        ok = self.current() is not None and App.ActiveDocument is not None
+        hit = self.current()
+        ok = hit is not None and App.ActiveDocument is not None
         self.insert_btn.setEnabled(ok)
-        self.print_btn.setEnabled(ok)
+        # a printable bearing is a deep groove ball bearing, not a linear bushing
+        self.print_btn.setEnabled(ok and not BD.is_linear(hit[1]))
 
     def current(self):
         rows = self.table.selectionModel().selectedRows() if self.table.selectionModel() else []
@@ -161,6 +165,7 @@ class SearchPanel:
                 doc=doc,
                 Closure=self.closure,
                 Flanged=self.flanged,
+                FlangeShape=self.flange_shape,
             )
             created.append(obj)
         doc.commitTransaction()

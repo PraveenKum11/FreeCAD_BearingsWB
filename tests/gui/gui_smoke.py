@@ -102,6 +102,24 @@ try:
     s.insert()
     std = [o for o in doc.Objects if hasattr(o, "FullDesignation")][0]
     expect((std.Label, std.Flanged, std.Closure) == ("F688-2RS", True, "2RS"), "inserted F688-2RS")
+    # linear bushing with a square flange: inserted as LMK8UU, no printable version
+    s.name.setText("LMK8UU")
+    pump(0.1)
+    expect(
+        s.table.item(0, 0).text() == "LMK8UU", "search LMK8UU shows " + s.table.item(0, 0).text()
+    )
+    expect(not s.print_btn.isEnabled(), "no printable version of a linear bushing")
+    s.insert()
+    lm = [o for o in doc.Objects if getattr(o, "Series", "") == "LM"][0]
+    expect(
+        (lm.Label, lm.Flanged, lm.FlangeShape) == ("LMK8UU", True, "Square"),
+        "inserted %s %s %s" % (lm.Label, lm.Flanged, lm.FlangeShape),
+    )
+    doc.removeObject(lm.Name)
+    expect(
+        "Bearings_Insert_LM" in Gui.listCommands() and "Bearings_Insert_R" in Gui.listCommands(),
+        "LM and R insert commands",
+    )
     s.name.setText("")
     s.D.setValue(22)
     s.table.selectRow(

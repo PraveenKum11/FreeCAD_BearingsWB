@@ -5,7 +5,7 @@ import math
 import os
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Icons")
-SERIES = ["60", "62", "63", "68", "69", "MR"]
+SERIES = ["60", "62", "63", "68", "69", "MR", "R"]
 
 
 def bearing_svg(label=None, balls=8, badge="#1f6feb"):
@@ -30,6 +30,34 @@ def bearing_svg(label=None, balls=8, badge="#1f6feb"):
         size = 15 if len(label) <= 2 else 12
         parts.append(
             f'<text x="41" y="59" font-family="Arial,Helvetica,sans-serif" font-size="{size}" '
+            f'font-weight="bold" fill="#ffffff" text-anchor="middle">{label}</text>'
+        )
+    parts.append("</svg>")
+    return "\n".join(parts) + "\n"
+
+
+def linear_svg(label="LM", badge="#1f6feb"):
+    """Linear ball bushing seen from the side: a sleeve with grooves on a shaft."""
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">',
+        '<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1">'
+        '<stop offset="0" stop-color="#f4f6fa"/><stop offset="0.5" stop-color="#c3c9d3"/>'
+        '<stop offset="1" stop-color="#8a93a3"/></linearGradient></defs>',
+        # shaft
+        '<rect x="2" y="25" width="60" height="12" rx="2" fill="url(#s)" stroke="#3b4250" stroke-width="1.5"/>',
+        # sleeve
+        '<rect x="12" y="12" width="40" height="38" rx="3" fill="url(#s)" stroke="#3b4250" stroke-width="2"/>',
+        # retaining ring grooves
+        '<rect x="18" y="12" width="3" height="38" fill="#5b6475"/>',
+        '<rect x="43" y="12" width="3" height="38" fill="#5b6475"/>',
+        # seals at both ends
+        '<rect x="12" y="20" width="3" height="22" fill="#2c3340"/>',
+        '<rect x="49" y="20" width="3" height="22" fill="#2c3340"/>',
+    ]
+    if label:
+        parts.append(f'<rect x="18" y="44" width="46" height="20" rx="4" fill="{badge}"/>')
+        parts.append(
+            f'<text x="41" y="59" font-family="Arial,Helvetica,sans-serif" font-size="13" '
             f'font-weight="bold" fill="#ffffff" text-anchor="middle">{label}</text>'
         )
     parts.append("</svg>")
@@ -63,8 +91,10 @@ if __name__ == "__main__":
     for s in SERIES:
         with open(os.path.join(OUT, f"Bearing_{s}.svg"), "w") as f:
             f.write(bearing_svg(s))
+    with open(os.path.join(OUT, "Bearing_LM.svg"), "w") as f:
+        f.write(linear_svg())
     with open(os.path.join(OUT, "PrintableBearing.svg"), "w") as f:
         f.write(bearing_svg("3D", balls=10, badge="#e8710a"))
     with open(os.path.join(OUT, "BearingSearch.svg"), "w") as f:
         f.write(search_svg())
-    print("wrote", len(SERIES) + 3, "icons to", OUT)
+    print("wrote", len(SERIES) + 4, "icons to", OUT)

@@ -1,0 +1,37 @@
+# Linear ball bushings, LM series ("Asian standard", interchangeable between makers), mm.
+# d = shaft, D = outside diameter, L = length. UU = rubber seals at both ends.
+# B, W, Dg: retaining ring grooves: distance between their outer faces, groove width and
+#   groove diameter (plain bushings only; flanged ones have no grooves).
+# Rows: number of ball circuits.
+# D1, H, PCD: flange OD, flange thickness and bolt circle of the flanged variants: LMF
+#   (round flange, D1) and LMK (square flange, side K, corners trimmed to D1).
+# Hole: bolt hole d1 / counterbore d2 / counterbore depth h.
+# Cross-checked 2026-10-14 against two public maker tables (plain, long, LMF, LMK).
+Designation,d,D,L,B,W,Dg,Rows,D1,H,PCD,K,d1,d2,h
+LM5UU,5,10,15,10.2,1.1,9.6,4,,,,,,,
+LM6UU,6,12,19,13.5,1.1,11.5,4,28,5,20,22,3.4,6.5,3.3
+LM8UU,8,15,24,17.5,1.1,14.3,4,32,5,24,25,3.4,6.5,3.3
+LM10UU,10,19,29,22,1.3,18,4,40,6,29,30,4.5,8,4.4
+LM12UU,12,21,30,23,1.3,20,4,42,6,32,32,4.5,8,4.4
+LM13UU,13,23,32,23,1.3,22,4,43,6,33,34,4.5,8,4.4
+LM16UU,16,28,37,26.5,1.6,27,5,48,6,38,37,4.5,8,4.4
+LM20UU,20,32,42,30.5,1.6,30.5,5,54,8,43,42,5.5,9.5,5.4
+LM25UU,25,40,59,41,1.85,38,6,62,8,51,50,5.5,9.5,5.4
+LM30UU,30,45,64,44.5,1.85,43,6,74,10,60,58,6.6,11,6.5
+LM35UU,35,52,70,49.5,2.1,49,6,82,10,67,64,6.6,11,6.5
+LM40UU,40,60,80,60.5,2.1,57,6,96,13,78,75,9,14,8.6
+LM50UU,50,80,100,74,2.6,76.5,6,116,13,98,92,9,14,8.6
+LM60UU,60,90,110,85,3.15,86.5,6,134,18,112,106,11,17.5,10.8
+LM6LUU,6,12,35,27,1.1,11.5,4,28,5,20,22,3.4,6.5,3.3
+LM8LUU,8,15,45,35,1.1,14.3,4,32,5,24,25,3.4,6.5,3.3
+LM10LUU,10,19,55,44,1.3,18,4,40,6,29,30,4.5,8,4.4
+LM12LUU,12,21,57,46,1.3,20,4,42,6,32,32,4.5,8,4.4
+LM13LUU,13,23,61,46,1.3,22,4,43,6,33,34,4.5,8,4.4
+LM16LUU,16,28,70,53,1.6,27,5,48,6,38,37,4.5,8,4.4
+LM20LUU,20,32,80,61,1.6,30.5,5,54,8,43,42,5.5,9.5,5.4
+LM25LUU,25,40,112,82,1.85,38,6,62,8,51,50,5.5,9.5,5.4
+LM30LUU,30,45,123,89,1.85,43,6,74,10,60,58,6.6,11,6.5
+LM35LUU,35,52,135,99,2.1,49,6,82,10,67,64,6.6,11,6.5
+LM40LUU,40,60,154,121,2.1,57,6,96,13,78,75,9,14,8.6
+LM50LUU,50,80,192,148,2.6,76.5,6,116,13,98,92,9,14,8.6
+LM60LUU,60,90,211,170,3.15,86.5,6,134,18,112,106,11,17.5,10.8

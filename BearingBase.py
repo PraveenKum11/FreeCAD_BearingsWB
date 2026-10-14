@@ -82,13 +82,15 @@ class BearingObject:
             "App::PropertyBool",
             "Flanged",
             GROUP,
-            "Flanged outer ring (F/MF variants, miniature sizes only)",
+            "Flanged outer ring (F/MF/FR miniatures; LMF/LMK linear bushings)",
         )
+        self._add_flange_shape(obj)
         obj.addProperty(
             "App::PropertyEnumeration",
             "DetailLevel",
             GROUP,
-            "Envelope: one solid; Standard: rings, balls, shields; Detailed: adds cage",
+            "Envelope: one solid; Standard: rings, balls, shields or seals; "
+            "Detailed: adds a cage (linear bushings: same as Standard)",
         )
         obj.DetailLevel = BG.DETAIL_LEVELS
         obj.DetailLevel = "Standard"
@@ -134,6 +136,29 @@ class BearingObject:
             frame = edge_frame(attach_to[0], attach_to[1][0])
             if frame:
                 obj.MatchTo = match_kind(series, frame)
+        self._update_editor_modes(obj)
+
+    @staticmethod
+    def _add_flange_shape(obj):
+        obj.addProperty(
+            "App::PropertyEnumeration",
+            "FlangeShape",
+            GROUP,
+            "Flanged linear bushings: Round (LMF) or Square (LMK)",
+        )
+        obj.FlangeShape = BD.FLANGE_SHAPES
+        obj.FlangeShape = "Round"
+
+    @staticmethod
+    def _update_editor_modes(obj):
+        """Show only the properties that apply to the series' family."""
+        linear = BD.family(obj.Series) == "linear"
+        if hasattr(obj, "Closure"):
+            obj.setEditorMode("Closure", 2 if linear else 0)  # LM bushings are always UU
+        if hasattr(obj, "FlangeShape"):
+            obj.setEditorMode("FlangeShape", 0 if linear else 2)
+        if hasattr(obj, "PitchDiameter"):
+            obj.setEditorMode("PitchDiameter", 2 if linear else 1)
 
     @staticmethod
     def _designation_list(series):
@@ -145,6 +170,13 @@ class BearingObject:
             names = self._designation_list(obj.Series)
             obj.Designation = names
             obj.Designation = current if current in names else BD.AUTO
+            self._update_editor_modes(obj)
+
+    def onDocumentRestored(self, obj):
+        # documents saved before linear bushings existed have no FlangeShape
+        if not hasattr(obj, "FlangeShape"):
+            self._add_flange_shape(obj)
+        self._update_editor_modes(obj)
 
     def _attached_frame(self, obj):
         if not obj.BaseObject:
@@ -180,26 +212,31 @@ class BearingObject:
                 )
             )
 
-        shape, colors = BG.build(row, obj.Closure, flanged, obj.DetailLevel)
+        flange_shape = getattr(obj, "FlangeShape", "Round")
+        shape, colors = BG.build(row, obj.Closure, flanged, obj.DetailLevel, flange_shape)
         self.face_colors = colors
 
-        ins = BG.Internals(row.d, row.D, row.B)
+        ins = BG.internals(row)
         obj.BoreDiameter = row.d
         obj.OuterDiameter = row.D
         obj.Width = row.width(obj.Closure)
         obj.PitchDiameter = ins.dm
         obj.BallDiameter = ins.Dw
         obj.BallCount = ins.Z
-        obj.FullDesignation = BD.full_designation(row, obj.Closure, flanged)
+        obj.FullDesignation = BD.full_designation(row, obj.Closure, flanged, flange_shape)
         self._update_label(obj)
 
         placement = obj.Placement
         if frame:
             center, normal = frame[0], frame[1]
+            offset = obj.Offset.Value
             if obj.Invert:
                 normal = -normal
+            elif flanged and obj.MatchTo == "Housing":
+                # in a hole the flange rests on the face and only the body goes in
+                offset += row.C1
             placement = FreeCAD.Placement(
-                center + normal * obj.Offset.Value, FreeCAD.Rotation(V(0, 0, 1), normal)
+                center + normal * offset, FreeCAD.Rotation(V(0, 0, 1), normal)
             )
             # the frame is global; express it in the container the bearing lives in
             placement = BRS.parent_placement(obj).inverse().multiply(placement)

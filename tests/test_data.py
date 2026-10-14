@@ -26,6 +26,26 @@ class Tables(unittest.TestCase):
                     if r.B_shielded is not None:
                         self.assertGreaterEqual(r.B_shielded, r.B, "shielded width < open width")
 
+    def test_linear_dimensions(self):
+        for r in BD.load_table("LM"):
+            with self.subTest(row=r.name):
+                self.assertTrue(r.name.startswith("LM") and r.name.endswith("UU"))
+                self.assertTrue(r.d < r.groove_D < r.D, "groove diameter outside the wall")
+                self.assertTrue(2 * r.groove_W < r.groove_B < r.B, "grooves don't fit the length")
+                self.assertIn(r.rows, (4, 5, 6))
+                if r.has_flange:
+                    d1, d2, h = r.hole
+                    self.assertTrue(r.D < r.K < r.D1, "square flange side between D and D1")
+                    # bolt holes (on the diagonals) clear the body and stay inside D1
+                    self.assertTrue(r.D < r.pcd - d2 and r.pcd + d2 < r.D1, "bolt circle")
+                    self.assertTrue(d1 < d2 and h < r.C1, "counterbored hole")
+
+    def test_inch_sizes(self):
+        """R sizes are inch fractions: 1/4 x 1/2 x 1/8 (R188), 1/2 x 1-1/8 (R8)."""
+        r188, r8 = BD.get_row("R", "R188"), BD.get_row("R", "R8")
+        self.assertEqual((r188.d, r188.D, r188.B, r188.B_shielded), (6.35, 12.7, 3.175, 4.762))
+        self.assertEqual((r8.d, r8.D), (12.7, 28.575))
+
 
 class Designations(unittest.TestCase):
     def test_parse_designation(self):
@@ -37,6 +57,11 @@ class Designations(unittest.TestCase):
             "6204-2Z": ("6204", "ZZ", False),
             "618/8": ("688", None, False),
             "mr63": ("MR63", None, False),
+            "FR188ZZ": ("R188", "ZZ", True),
+            "R188-2RS": ("R188", "2RS", False),
+            "LM8UU": ("LM8UU", None, False),
+            "LMF8LUU": ("LM8LUU", None, "Round"),
+            "lmk8uu": ("LM8UU", None, "Square"),
         }
         for text, want in cases.items():
             with self.subTest(text=text):
@@ -61,6 +86,20 @@ class Search(unittest.TestCase):
         self.assertEqual(set(names(BD.search(D=22))), {"636", "627", "608", "6900"}, "by OD")
         self.assertEqual(names(BD.search(name="8x22x7")), ["608"], "size text")
         self.assertIn("6801", names(BD.search(D=22, tol=1)), "tolerance")
+
+    def test_new_families(self):
+        self.assertEqual(
+            names(BD.search(name="LMK8")), ["LM8UU", "LM8LUU"], "flanged LM, by prefix"
+        )
+        self.assertEqual(names(BD.search(name="FR188")), ["R188"])
+        self.assertEqual(names(BD.search(d=8, D=15)), ["LM8UU", "LM8LUU"])
+
+    def test_full_designation(self):
+        lm, r = BD.get_row("LM", "LM8LUU"), BD.get_row("R", "R188")
+        self.assertEqual(BD.full_designation(lm, "ZZ", True, "Square"), "LMK8LUU")
+        self.assertEqual(BD.full_designation(lm, "Open", True), "LMF8LUU")
+        self.assertEqual(BD.full_designation(lm, "2RS", False), "LM8LUU", "no closure codes")
+        self.assertEqual(BD.full_designation(r, "ZZ", True), "FR188ZZ")
 
     def test_by_height(self):
         hits = BD.search(B=7)
