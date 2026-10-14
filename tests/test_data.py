@@ -40,6 +40,23 @@ class Tables(unittest.TestCase):
                     self.assertTrue(r.D < r.pcd - d2 and r.pcd + d2 < r.D1, "bolt circle")
                     self.assertTrue(d1 < d2 and h < r.C1, "counterbored hole")
 
+    def test_angular_follows_62_and_63(self):
+        """ISO 15: 72xx / 73xx have the boundary dimensions of 62xx / 63xx."""
+        for series, base in (("72", "62"), ("73", "63")):
+            rows = BD.load_table(series)
+            self.assertTrue(rows)
+            for r in rows:
+                twin = BD.get_row(base, base + r.name[2:])
+                self.assertEqual((r.d, r.D, r.B, r.r), (twin.d, twin.D, twin.B, twin.r), r.name)
+                self.assertFalse(r.has_flange)
+
+    def test_thrust_table(self):
+        rows = BD.load_table("511")
+        self.assertEqual(rows[0].name, "51100")
+        r = BD.get_row("511", "51104")
+        self.assertEqual((r.d, r.D, r.B), (20, 35, 10))
+        self.assertTrue(all(0 < x.d < x.D and 0 < x.B < x.D - x.d for x in rows))
+
     def test_inch_sizes(self):
         """R sizes are inch fractions: 1/4 x 1/2 x 1/8 (R188), 1/2 x 1-1/8 (R8)."""
         r188, r8 = BD.get_row("R", "R188"), BD.get_row("R", "R8")
@@ -62,6 +79,9 @@ class Designations(unittest.TestCase):
             "LM8UU": ("LM8UU", None, False),
             "LMF8LUU": ("LM8LUU", None, "Round"),
             "lmk8uu": ("LM8UU", None, "Square"),
+            "7204B": ("7204", None, False),
+            "7204 BEP": ("7204", None, False),
+            "51104": ("51104", None, False),
         }
         for text, want in cases.items():
             with self.subTest(text=text):
@@ -93,6 +113,12 @@ class Search(unittest.TestCase):
         )
         self.assertEqual(names(BD.search(name="FR188")), ["R188"])
         self.assertEqual(names(BD.search(d=8, D=15)), ["LM8UU", "LM8LUU"])
+
+    def test_angular_and_thrust(self):
+        self.assertEqual(names(BD.search(name="7204 BEP")), ["7204"])
+        self.assertEqual(names(BD.search(name="511", d=20)), ["51104"])
+        self.assertEqual(BD.full_designation(BD.get_row("72", "7204"), "ZZ", True), "7204B")
+        self.assertEqual(BD.full_designation(BD.get_row("511", "51104"), "2RS", False), "51104")
 
     def test_full_designation(self):
         lm, r = BD.get_row("LM", "LM8LUU"), BD.get_row("R", "R188")

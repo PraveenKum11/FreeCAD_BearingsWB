@@ -4,9 +4,11 @@
 Tables hold only boundary dimensions (d, D, B, r) plus optional shielded width and
 flange data. Internal geometry is computed in BearingGeometry.
 
-Two families: "deepgroove" (BearingRow) and "linear" ball bushings (LinearRow). Both
-have d (bore / shaft), D (outside diameter) and B (width / length), so search and
-auto-match treat them alike.
+Families: "deepgroove" (BearingRow), "angular" contact (AngularRow, same boundary
+dimensions as series 62 / 63, so derived from those tables), "thrust" (ThrustRow, B is
+the height H) and "linear" ball bushings (LinearRow). All have d (bore / shaft), D
+(outside diameter) and B (width, height or length), so search and auto-match treat them
+alike.
 """
 
 import csv
@@ -24,8 +26,14 @@ SERIES = {
     "69": ("Thin deep groove ball bearing, series 69 (619)", "iso15_69.csv", "695", "deepgroove"),
     "MR": ("Metric miniature ball bearing, MR", "mr.csv", "MR105", "deepgroove"),
     "R": ("Inch miniature ball bearing, R", "inch_r.csv", "R188", "deepgroove"),
+    "72": ("Angular contact ball bearing, series 72 B", "iso15_62.csv", "7204", "angular"),
+    "73": ("Angular contact ball bearing, series 73 B", "iso15_63.csv", "7304", "angular"),
+    "511": ("Thrust ball bearing, series 511", "thrust_511.csv", "51104", "thrust"),
     "LM": ("Linear ball bushing, LM", "linear_lm.csv", "LM8UU", "linear"),
 }
+
+# families without shields or seals (their Closure property is hidden)
+NO_CLOSURES = ("angular", "thrust", "linear")
 
 FLANGE_SHAPES = ["Round", "Square"]  # linear bushings: LMF / LMK
 
@@ -60,6 +68,22 @@ class BearingRow:
 
     def __repr__(self):
         return "BearingRow(%s %gx%gx%g)" % (self.name, self.d, self.D, self.B)
+
+
+class AngularRow(BearingRow):
+    """Angular contact ball bearing, 40° (suffix B). ISO 15 gives series 72 / 73 the
+    boundary dimensions of 62 / 63; open only, no flanges."""
+
+    is_angular = True
+
+
+class ThrustRow(BearingRow):
+    """Single direction thrust ball bearing: B is the height H."""
+
+    is_thrust = True
+
+    def width(self, closure=None):
+        return self.B
 
 
 class LinearRow:
@@ -145,12 +169,35 @@ def _linear_row(rec):
     )
 
 
+def _angular_rows(series, records):
+    """72xx / 73xx from the 62 / 63 table: the four-digit sizes, renamed."""
+    base = "6" + series[1:]
+    rows = []
+    for rec in records:
+        name = rec["Designation"].strip()
+        if len(name) == 4 and name.startswith(base):
+            r = _bearing_row(rec)
+            rows.append(AngularRow(series + name[2:], r.d, r.D, r.B, r.r))
+    return rows
+
+
+def _thrust_row(rec):
+    return ThrustRow(
+        rec["Designation"].strip(), _num(rec["d"]), _num(rec["D"]), _num(rec["H"]), _num(rec["r"])
+    )
+
+
 def load_table(series):
     """Return the rows of a series key, sorted by bore (then OD and width)."""
     if series in _tables:
         return _tables[series]
-    make = _linear_row if family(series) == "linear" else _bearing_row
-    rows = [make(rec) for rec in _read_csv(os.path.join(dataPath, SERIES[series][1]))]
+    records = _read_csv(os.path.join(dataPath, SERIES[series][1]))
+    kind = family(series)
+    if kind == "angular":
+        rows = _angular_rows(series, records)
+    else:
+        make = {"linear": _linear_row, "thrust": _thrust_row}.get(kind, _bearing_row)
+        rows = [make(rec) for rec in records]
     rows.sort(key=lambda r: (r.d, r.D, r.B))
     _tables[series] = rows
     return rows
@@ -168,8 +215,12 @@ def get_row(series, name):
 
 
 def full_designation(row, closure, flanged, flange_shape="Round"):
-    """608ZZ, F688-2RS, MF105ZZ, FR188ZZ; linear: LM8UU, LMF8UU, LMK8LUU (no closure)."""
+    """608ZZ, F688-2RS, MF105ZZ, FR188ZZ; 7204B; 51104; linear: LM8UU, LMF8UU, LMK8LUU."""
     name = row.name
+    if getattr(row, "is_angular", False):
+        return name + "B"
+    if getattr(row, "is_thrust", False):
+        return name
     if is_linear(row):
         if flanged and row.has_flange:
             name = "LM" + ("K" if flange_shape == "Square" else "F") + name[2:]
@@ -204,6 +255,7 @@ _CLOSURE_RE = re.compile(r"-?(?:(2RS|RS)\d?|(2Z|ZZ|Z))$", re.I)
 _CLOSURE_CODES = {"2RS": "2RS", "RS": "RS", "2Z": "ZZ", "ZZ": "ZZ", "Z": "Z"}
 _SKF_MINI_RE = re.compile(r"^6(1[89])/(\d)$")  # SKF 618/8 = 688, 619/5 = 695
 _LINEAR_FLANGE_RE = re.compile(r"^LM([FK])(\d.*)$")  # LMF8UU, LMK8LUU
+_ANGULAR_RE = re.compile(r"^(7[23]\d\d)(?:B|AC|C)[A-Z0-9/]*$")  # 7204B, 7204 BEP, 7305 BECBP
 
 
 def parse_designation(text):
@@ -215,6 +267,9 @@ def parse_designation(text):
     "LMF8LUU" -> ("LM8LUU", None, "Round"); `flanged` is then the flange shape.
     """
     t = text.strip().upper().replace(" ", "")
+    m = _ANGULAR_RE.match(t)
+    if m:
+        return m.group(1), None, False
     m = _LINEAR_FLANGE_RE.match(t)
     if m:
         return "LM" + m.group(2), None, "Square" if m.group(1) == "K" else "Round"

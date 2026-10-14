@@ -153,9 +153,13 @@ class BearingObject:
     @staticmethod
     def _update_editor_modes(obj):
         """Show only the properties that apply to the series' family."""
-        linear = BD.family(obj.Series) == "linear"
+        kind = BD.family(obj.Series)
+        linear = kind == "linear"
         if hasattr(obj, "Closure"):
-            obj.setEditorMode("Closure", 2 if linear else 0)  # LM bushings are always UU
+            # LM bushings are always UU; angular contact and thrust bearings come open
+            obj.setEditorMode("Closure", 2 if kind in BD.NO_CLOSURES else 0)
+        if hasattr(obj, "Flanged"):
+            obj.setEditorMode("Flanged", 2 if kind in ("angular", "thrust") else 0)
         if hasattr(obj, "FlangeShape"):
             obj.setEditorMode("FlangeShape", 0 if linear else 2)
         if hasattr(obj, "PitchDiameter"):

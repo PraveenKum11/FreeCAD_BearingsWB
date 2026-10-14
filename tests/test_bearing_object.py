@@ -280,3 +280,24 @@ class InchBearings(DocumentTest):
         self.assertEqual(b.FullDesignation, "FR188ZZ")
         self.assertTrue(close(b.Width.Value, 4.762), b.Width.Value)
         self.assertTrue(close(tight_bb(b.Shape).XLength, 13.894, 0.01), "flange diameter")
+
+
+class AngularAndThrust(DocumentTest):
+    def test_angular_contact(self):
+        b = BearingBase.make_bearing("72", doc=self.doc, Closure="ZZ")
+        self.assertEqual((b.FullDesignation, b.Label), ("7204B", "7204B"), "no closure codes")
+        self.assertIn("Hidden", b.getEditorMode("Closure"))
+        self.assertIn("Hidden", b.getEditorMode("Flanged"))
+        self.assertTrue(close(tight_bb(b.Shape).XLength, 47, 0.01))
+
+    def test_thrust_on_a_shaft(self):
+        shaft = self.doc.addObject("Part::Feature", "Shaft")
+        shaft.Shape = Part.makeCylinder(10, 40)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "511", attach_to=(shaft, [find_circle(shaft, 10, 40)]), doc=self.doc
+        )
+        self.assertEqual((b.MatchTo, b.FullDesignation), ("Shaft", "51104"))
+        bb = tight_bb(b.Shape)
+        self.assertTrue(close(bb.ZMax, 40, 0.01) and close(bb.ZMin, 30, 0.01), (bb.ZMin, bb.ZMax))
+        self.assertLess(b.Shape.common(shaft.Shape).Volume, 1e-3, "washers clear the shaft")

@@ -27,6 +27,8 @@ def expected_solids(row, closure, detail):
     if BD.is_linear(row):
         # sleeve, two seals, retainer; Detailed adds the balls
         return 4 + (BG.internals(row).Z if detail == "Detailed" else 0)
+    if getattr(row, "is_thrust", False):
+        return 2 + BG.internals(row).Z  # two washers and the balls
     top, bottom = BG._closure_sides(closure)
     return 2 + int(top) + int(bottom) + BG.Internals(row.d, row.D, row.B).Z
 
@@ -59,8 +61,10 @@ class AllShapes(unittest.TestCase):
             V(0, 0, -B / 2),
         ]
         self.assertFalse(any(shape.isInside(p, 1e-7, True) for p in probes), "bore obstructed")
+        # thrust bearings: the outside is the top (housing) washer, not the ball gap
+        z_out = -BG.internals(row).washer / 2 if getattr(row, "is_thrust", False) else -B / 2
         self.assertTrue(
-            shape.isInside(V(row.D / 2 * 0.99, 0, -B / 2), 1e-7, True), "outer ring missing"
+            shape.isInside(V(row.D / 2 * 0.99, 0, z_out), 1e-7, True), "outer ring missing"
         )
         n = expected_solids(row, closure, detail)
         if detail == "Detailed" and not BD.is_linear(row):
@@ -73,7 +77,9 @@ class AllShapes(unittest.TestCase):
             rows = BD.load_table(series)
             sample = {rows[0].name, rows[len(rows) // 2].name, rows[-1].name}
             linear = BD.family(series) == "linear"
-            closures = ("Open",) if linear else ("Open", "ZZ", "2RS", "Z")
+            closures = (
+                ("Open",) if BD.family(series) in BD.NO_CLOSURES else ("Open", "ZZ", "2RS", "Z")
+            )
             for row in rows:
                 variants = [(False, "Round")]
                 if row.has_flange:
@@ -98,6 +104,9 @@ class AllShapes(unittest.TestCase):
             ("LM", "LM8UU"),
             ("LM", "LM20LUU"),
             ("R", "R188"),
+            ("72", "7204"),
+            ("511", "51104"),
+            ("511", "51120"),
             ("60", "608"),
             ("62", "6204"),
             ("68", "688"),

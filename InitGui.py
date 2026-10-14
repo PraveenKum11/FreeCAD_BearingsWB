@@ -9,11 +9,12 @@ class BearingsWorkbench(Workbench):
     Icon = BRutils.icon("BearingsWB.svg")
 
     def Initialize(self):
+        import BearingBOMGui  # noqa: F401  (registers Bearings_BOM)
         import BearingsCmd
         import BearingSearchGui  # noqa: F401  (registers Bearings_Search)
         import PrintableBearingGui  # noqa: F401  (registers Bearings_PrintableBearing)
 
-        tools = ["Bearings_Search", "Bearings_PrintableBearing"]
+        tools = ["Bearings_Search", "Bearings_PrintableBearing", "Bearings_BOM"]
         self.appendToolbar("Bearings", BearingsCmd.COMMANDS)
         self.appendToolbar("Bearing tools", tools)
         self.appendMenu("Bearings", BearingsCmd.COMMANDS + ["Separator"] + tools)

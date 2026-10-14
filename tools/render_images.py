@@ -106,8 +106,12 @@ def standard_parts(
     flanged = flanged and row.has_flange
     if BD.is_linear(row):
         made = BG.make_linear(row, flanged, shape, detail)
+    elif getattr(row, "is_thrust", False):
+        made = BG.make_thrust(row, detail)
     else:
-        made = BG.make_deep_groove(row, closure, flanged, detail)
+        made = BG.make_deep_groove(
+            row, closure, flanged, detail, angular=getattr(row, "is_angular", False)
+        )
     for solid, rgb in made:
         s = solid.copy()
         if pl is not None:
@@ -535,6 +539,54 @@ def printable_panel():
     side_by_side(form, img, "printable-panel.png")
 
 
+def angular_thrust():
+    """A 6204 next to a 7204B (angular contact) and a 51104 (thrust), cut away."""
+    cases = [
+        ("62", "6204", "6204 (deep groove)"),
+        ("72", "7204", "7204B (angular contact)"),
+        ("511", "51104", "51104 (thrust)"),
+    ]
+    items, captions, x = [], [], 0.0
+    for series, name, caption in cases:
+        row = BD.get_row(series, name)
+        x += row.D / 2
+        pl = App.Placement(V(x, 0, 0), App.Rotation())
+        items += cut_all(
+            standard_parts(series, name, detail="Detailed", pl=pl), quarter(V(x, 0, 0))
+        )
+        captions.append((caption, (x, 0, 0)))
+        x += row.D / 2 + 14
+    # nearly side-on, so the cut faces show the ring profiles
+    img, proj, _ = render(items, direction=(0, 1, -0.3), scale=3, outlines=False)
+    row_with_captions(img, proj, captions, "angular-thrust.png", 1800, font_size=34)
+
+
+def bom_panel():
+    """The BOM panel listing a small machine's bearings."""
+    import BearingBOMGui
+
+    clear(scene)
+    for name, kw in (("608", {}), ("608", {}), ("608", {"Closure": "ZZ"})):
+        BearingBase.make_bearing("60", name, doc=scene, **kw)
+    for _ in range(4):
+        BearingBase.make_bearing("LM", "LM8UU", doc=scene, Flanged=True, FlangeShape="Square")
+    BearingBase.make_bearing("511", "51104", doc=scene)
+    PB.create_races(
+        scene,
+        App.Placement(V(80, 0, 0), App.Rotation()),
+        dict(P608, BallDiameter=4.5, NumBalls=9),
+        False,
+        True,
+        False,
+    )
+    scene.recompute()
+    panel = BearingBOMGui.open_panel()
+    panel.form.setMinimumWidth(900)
+    form = grab(panel.form)
+    Gui.Control.closeDialog()
+    save(form, "bom-panel.png")
+
+
 def find_panel():
     import BearingSearchGui as SG
 
@@ -723,6 +775,8 @@ STEPS = (
     convert,
     printable_panel,
     find_panel,
+    angular_thrust,
+    bom_panel,
     turntable_gif,
     workflow_gif,
 )

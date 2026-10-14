@@ -13,10 +13,12 @@ Tested with FreeCAD 1.1. Inspired by
 
 - **Standard bearings**: deep groove series 60, 62, 63, 68, 69, MR miniatures and inch
   R sizes, with shields, seals and flanges, sized automatically from the edge you click.
+- **Angular contact and thrust bearings**: 72xx B / 73xx B and 511xx.
 - **Linear bushings**: LM8UU and friends, long, round-flanged and square-flanged.
 - **Find bearing**: search by name, bore, outside diameter or height.
 - **3D-printable bearings**: races, a snap-in cage and balls as separate PartDesign
   bodies, with a live preview while you set them up.
+- **Bearing BOM**: every bearing in the document with its quantity, saved as CSV.
 
 ## Standard bearings
 
@@ -32,6 +34,8 @@ Pick a series on the **Bearings** toolbar. You get a maker-friendly default (608
 | **69** (619) | Thin section | 695 |
 | **MR** | Metric miniature | MR105 (5 × 10 × 3) |
 | **R** | Inch miniature | R188 (1/4" × 1/2" × 1/8"), fidget spinners and RC; FR188 flanged |
+| **72**, **73** | Angular contact, 40° (B) | 7204B: same size as a 6204, takes axial load from one side |
+| **511** | Thrust ball bearing | 51104 (20 × 35 × 10): turntables, lazy susans, axial loads |
 
 ### Closures and flanges
 
@@ -71,6 +75,19 @@ Further bearings of the same size are `608_001`, `608_002`, …
 The tables hold only the standard boundary dimensions (ISO 15). Ball size, ball count and
 raceways are computed, so the shapes are representative, not a copy of one maker's
 drawing.
+
+### Angular contact and thrust bearings
+
+**Angular contact** bearings (72xx B, 73xx B) have the same boundary dimensions as the
+62 / 63 series. Each ring has a high shoulder on one side and a low one on the other, so
+the bearing carries axial load from the top. **Thrust** bearings (511xx) are two washers
+with the balls between them: the shaft washer at the bottom fits the shaft, the housing
+washer on top sits clear of it. Both snap to edges like the other bearings; **Detailed**
+adds the cage.
+
+<p align="center">
+  <img src="images/angular-thrust.png" width="860" alt="6204, 7204B and 51104 cut away">
+</p>
 
 ## Linear bushings
 
@@ -181,6 +198,19 @@ The design comes from the
 printed and tested in real projects. The macro is still available for printing bearings
 without the whole workbench.
 
+## Bearing BOM
+
+**Bearing tools → Bearing BOM** lists every bearing in the document with its quantity:
+standard bearings and bushings by full designation (copies made with App::Link and link
+arrays included), printable bearings by size, and the balls the printable bearings need,
+so you know what to buy. Hidden objects, such as a standard bearing you replaced with a
+printable one, are skipped unless you untick **Skip hidden objects**. **Save CSV…** writes
+the list for a spreadsheet.
+
+<p align="center">
+  <img src="images/bom-panel.png" width="760" alt="The Bearing BOM panel listing 608s, LMK8UU bushings, a thrust bearing, a printable bearing and its balls">
+</p>
+
 ## Install
 
 Until the workbench is in the Addon Manager, install it by hand: put this repository in
@@ -220,6 +250,8 @@ no load ratings, speeds or other catalogue data are included.
 |---|---|---|
 | Series 60, 62, 63, 68, 69 (`iso15_*.csv`) | ISO 15 boundary dimensions; shielded widths and flanges from common miniature listings | [SKF's public deep groove ball bearing table](https://www.skf.com/group/products/rolling-bearings/ball-bearings/deep-groove-ball-bearings): every size SKF sells matches, and corner radii were checked per bearing |
 | MR miniatures (`mr.csv`) | Common metric miniature listings (Minebea/NMB naming) | SKF's table for the closed widths |
+| Thrust 511 (`thrust_511.csv`) | ISO 104 boundary dimensions, dimension series 11 | SKF's public thrust ball bearing table: every row matches |
+| Angular contact 72 / 73 | Taken from the 62 / 63 tables (ISO 15 gives them the same boundary dimensions) | SKF's angular contact table: all 41 B sizes match |
 | Inch R (`inch_r.csv`) | ABMA inch dimensions, converted exactly (× 25.4) | SKF's table (R144, R166, R188, R3–R12) and the [MKL miniature bearing size chart](https://www.mklbearing.com/blog/miniature-bearing-size-chart_b54) (all sizes, FR flanges) |
 | LM linear bushings (`linear_lm.csv`) | The interchangeable "Asian standard" LM dimensions, from [Samick's linear bushing catalog](https://www.findling.com/fileadmin/Inhalt/PDFs/Kataloge/Samick_Linear_Bushing.pdf) (plain, long, LMF, LMK) | [G2k's LM table](https://www.euro-bearings.com/g2klm.htm) (plain) and [Tuli's LMK-LUU sheet](https://www.tuli-shop.com/media/custom/upload/LMK-LUU-Linear-Bearings.pdf) (square flange) |
 

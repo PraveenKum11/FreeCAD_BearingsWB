@@ -210,8 +210,15 @@ def make_envelope(row, closure, flanged):
     return [(revolve(items), COLOR_STEEL)]
 
 
-def make_deep_groove(row, closure, flanged, detail):
-    """Return a list of (solid, rgb) for a deep groove ball bearing."""
+def make_deep_groove(row, closure, flanged, detail, angular=False):
+    """Return a list of (solid, rgb) for a deep groove ball bearing.
+
+    `angular`: an angular contact bearing (72xx B / 73xx B, 40°) instead: each ring has a
+    high shoulder on one side and a low one on the other (outer ring high at the top,
+    inner ring high at the bottom), so it carries axial load from the top. No closures.
+    """
+    if angular:
+        closure, flanged = "Open", False
     if detail == "Envelope":
         return make_envelope(row, closure, flanged)
 
@@ -226,35 +233,48 @@ def make_deep_groove(row, closure, flanged, detail):
     sd = (cdims[0] + cdims[1]) if cdims else 0.0  # depth of the shield seat
     rec = ins.recess
 
+    # shoulder radii, bottom and top: equal for a deep groove bearing
+    xs_b = xs_t = xs
+    xl_b = xl_t = xl
+    if angular:
+        xs_t = dm / 2 - 0.48 * Dw  # low inner shoulder at the top, almost at the ball
+        xl_b = dm / 2 + 0.48 * Dw  # low outer shoulder at the bottom
+
     # inner ring with raceway
     xc_in = dm / 2 - Dw / 2 + ins.r_groove_in
-    h_in = math.sqrt(ins.r_groove_in**2 - (xc_in - xs) ** 2)
-    rb = min(r, 0.4 * (xs - row.d / 2))
+    h_in_b = math.sqrt(ins.r_groove_in**2 - (xc_in - xs_b) ** 2)
+    h_in_t = math.sqrt(ins.r_groove_in**2 - (xc_in - xs_t) ** 2)
+    rb = min(r, 0.4 * (xs_t - row.d / 2))
     inner = revolve(
         [
             ("p", row.d / 2, -B, rb),
-            ("p", xs, -B, 0),
-            ("p", xs, zc - h_in, 0),
+            ("p", xs_b, -B, 0),
+            ("p", xs_b, zc - h_in_b, 0),
             ("a", dm / 2 - Dw / 2, zc),
-            ("p", xs, zc + h_in, 0),
-            ("p", xs, 0, 0),
+            ("p", xs_t, zc + h_in_t, 0),
+            ("p", xs_t, 0, 0),
             ("p", row.d / 2, 0, rb),
         ]
     )
 
     # outer ring with raceway and shield seats
     xc_out = dm / 2 + Dw / 2 - ins.r_groove_out
-    h_out = math.sqrt(ins.r_groove_out**2 - (xl - xc_out) ** 2)
-    ro = min(r, 0.4 * (row.D / 2 - xl - rec))
-    items = [("p", xl + rec if bottom else xl, -B, 0), ("p", row.D / 2, -B, ro)]
+    h_out_t = math.sqrt(ins.r_groove_out**2 - (xl_t - xc_out) ** 2)
+    h_out_b = math.sqrt(ins.r_groove_out**2 - (xl_b - xc_out) ** 2)
+    ro = min(r, 0.4 * (row.D / 2 - xl_b - rec))
+    items = [("p", xl_b + rec if bottom else xl_b, -B, 0), ("p", row.D / 2, -B, ro)]
     items += _outer_top(row, flanged, ro)
     if top:
-        items += [("p", xl + rec, 0, 0), ("p", xl + rec, -sd, 0), ("p", xl, -sd, 0)]
+        items += [("p", xl_t + rec, 0, 0), ("p", xl_t + rec, -sd, 0), ("p", xl_t, -sd, 0)]
     else:
-        items += [("p", xl, 0, 0)]
-    items += [("p", xl, zc + h_out, 0), ("a", dm / 2 + Dw / 2, zc), ("p", xl, zc - h_out, 0)]
+        items += [("p", xl_t, 0, 0)]
+    items += [
+        ("p", xl_t, zc + h_out_t, 0),
+        ("a", dm / 2 + Dw / 2, zc),
+        ("p", xl_b, zc - h_out_b, 0),
+    ]
     if bottom:
-        items += [("p", xl, -B + sd, 0), ("p", xl + rec, -B + sd, 0)]
+        items += [("p", xl_b, -B + sd, 0), ("p", xl_b + rec, -B + sd, 0)]
     outer = revolve(items)
 
     parts = [(inner, COLOR_STEEL), (outer, COLOR_STEEL)]
@@ -302,6 +322,104 @@ def make_deep_groove(row, closure, flanged, detail):
     return parts
 
 
+# ---------------------------------------------------------------- thrust bearings
+
+
+class ThrustInternals:
+    """Computed internals of a single direction thrust ball bearing (511xx).
+
+    Two washers with a ball groove each: the shaft washer (bottom, bore d, a little under
+    D outside) and the housing washer (top, outside D, bore a little over d), with the
+    balls on the pitch circle between them. Same attribute names as Internals."""
+
+    def __init__(self, row):
+        d, D, H = row.d, row.D, row.B
+        self.dm = (d + D) / 2
+        target = min(0.55 * H, 0.4 * (D - d))
+        fitting = [b for b in STANDARD_BALLS if b <= target + 1e-9]
+        self.Dw = fitting[-1] if fitting else round(target, 3)
+        z_max = int(math.floor(math.pi / math.asin(min(1.0, 1.15 * self.Dw / self.dm))))
+        self.Z = max(6, z_max)
+        self.groove = 0.2 * self.Dw  # groove depth in each washer
+        self.washer = H / 2 - (self.Dw / 2 - self.groove)  # washer thickness
+        self.r_groove = 0.53 * self.Dw
+        clearance = max(0.2, 0.02 * D)
+        self.shaft_washer_od = D - 2 * clearance
+        self.housing_washer_bore = d + 2 * clearance
+
+
+def _thrust_washer(row, ins, top):
+    """Washer profile with its ball groove: housing washer at the top, shaft washer at
+    the bottom."""
+    H, zc, Dw = row.B, -row.B / 2, ins.Dw
+    r_in = (ins.housing_washer_bore if top else row.d) / 2
+    r_out = (row.D if top else ins.shaft_washer_od) / 2
+    sign = 1 if top else -1
+    z_face = zc + sign * (Dw / 2 - ins.groove)  # face toward the balls
+    z_back = 0.0 if top else -H
+    z_center = zc + sign * (Dw / 2 - ins.r_groove)  # groove arc center
+    w = math.sqrt(ins.r_groove**2 - (z_face - z_center) ** 2)
+    x = ins.dm / 2
+    r = min(row.r, 0.3 * ins.washer)
+    return revolve(
+        [
+            ("p", r_in, z_back, r),
+            ("p", r_out, z_back, r),
+            ("p", r_out, z_face, 0),
+            ("p", x + w, z_face, 0),
+            ("a", x, zc + sign * Dw / 2),
+            ("p", x - w, z_face, 0),
+            ("p", r_in, z_face, 0),
+        ]
+    )
+
+
+def make_thrust(row, detail):
+    """Return a list of (solid, rgb) for a single direction thrust ball bearing.
+
+    Envelope: one ring d x D x H. Standard: both washers and the balls. Detailed: adds a
+    flat cage with a pocket for each ball."""
+    H = row.B
+    if detail == "Envelope":
+        return [(_annulus(row.d / 2, row.D / 2, -H, 0), COLOR_STEEL)]
+    ins = ThrustInternals(row)
+    zc, Dw, dm = -H / 2, ins.Dw, ins.dm
+    parts = [
+        (_thrust_washer(row, ins, False), COLOR_STEEL),
+        (_thrust_washer(row, ins, True), COLOR_STEEL),
+    ]
+    ball = Part.makeSphere(Dw / 2, V(dm / 2, 0, zc))
+    for k in range(ins.Z):
+        b = ball.copy()
+        b.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.Z)
+        parts.append((b, COLOR_BALL))
+    if detail == "Detailed":
+        # flat cage in the gap between the washers, one pocket per ball (one segment,
+        # patterned, as for the radial bearings)
+        gap = 2 * (Dw / 2 - ins.groove)
+        tc = 0.5 * gap
+        # radially within both washers
+        x0 = max(dm / 2 - 0.65 * Dw, ins.housing_washer_bore / 2 + 0.05 * Dw)
+        x1 = min(dm / 2 + 0.65 * Dw, ins.shaft_washer_od / 2 - 0.05 * Dw)
+        face = _profile_face(
+            [
+                ("p", x0, zc - tc / 2, 0),
+                ("p", x1, zc - tc / 2, 0),
+                ("p", x1, zc + tc / 2, 0),
+                ("p", x0, zc + tc / 2, 0),
+            ]
+        )
+        face.rotate(V(0, 0, 0), V(0, 0, 1), -180.0 / ins.Z)
+        segment = Part.Solid(face.revolve(V(0, 0, 0), V(0, 0, 1), 360.0 / ins.Z))
+        segment = segment.cut(Part.makeSphere(0.52 * Dw, V(dm / 2, 0, zc)))
+        for k in range(ins.Z):
+            for s_ in segment.Solids:
+                c = s_.copy()
+                c.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.Z)
+                parts.append((c, COLOR_CAGE))
+    return parts
+
+
 # ---------------------------------------------------------------- linear bushings
 
 
@@ -329,7 +447,9 @@ class LinearInternals:
 
 
 def internals(row):
-    """Internals of a deep groove bearing or a linear bushing."""
+    """Internals of any row: radial ball bearing, thrust bearing or linear bushing."""
+    if getattr(row, "is_thrust", False):
+        return ThrustInternals(row)
     return (
         LinearInternals(row) if getattr(row, "is_linear", False) else Internals(row.d, row.D, row.B)
     )
@@ -437,8 +557,12 @@ def build(row, closure, flanged, detail, flange_shape="Round"):
     if key not in _shape_cache:
         if linear:
             parts = make_linear(row, flanged, flange_shape, detail)
+        elif getattr(row, "is_thrust", False):
+            parts = make_thrust(row, detail)
         else:
-            parts = make_deep_groove(row, closure, flanged, detail)
+            parts = make_deep_groove(
+                row, closure, flanged, detail, angular=getattr(row, "is_angular", False)
+            )
         if len(parts) == 1:
             shape = parts[0][0]
         else:

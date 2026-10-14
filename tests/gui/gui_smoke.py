@@ -273,6 +273,29 @@ try:
     p5.reject()
     pump(0.2)
     expect(sg.getNumChildren() == n0, "no preview left after Cancel")
+    # bill of materials of everything built above
+    import BearingBOMGui
+
+    bom = BearingBOMGui.open_panel()
+    pump(0.3)
+    items = {r["Item"]: r["Quantity"] for r in bom.items}
+    # the F688-2RS was replaced by a printable bearing above, which hid it
+    expect("F688-2RS" not in items, "BOM skips the hidden, replaced bearing: %s" % items)
+    bom.skip_hidden.setChecked(False)
+    pump(0.2)
+    items = {r["Item"]: r["Quantity"] for r in bom.items}
+    expect(items.get("F688-2RS") == 1, "BOM lists it when hidden objects are included")
+    expect(
+        any(k.startswith("Printable bearing") for k in items), "BOM lists the printable bearings"
+    )
+    expect(bom.table.rowCount() == len(bom.items) and bom.save_btn.isEnabled(), "BOM table filled")
+    bom.reject()
+    pump(0.2)
+    expect(
+        {"Bearings_Insert_72", "Bearings_Insert_73", "Bearings_Insert_511", "Bearings_BOM"}
+        <= set(Gui.listCommands()),
+        "angular, thrust and BOM commands",
+    )
     log("RESULT", "PASS" if not problems else "FAIL (%d)" % len(problems))
     log("OK")
 except Exception:

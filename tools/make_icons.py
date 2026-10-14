@@ -5,7 +5,7 @@ import math
 import os
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Icons")
-SERIES = ["60", "62", "63", "68", "69", "MR", "R"]
+SERIES = ["60", "62", "63", "68", "69", "MR", "R", "72", "73"]
 
 
 def bearing_svg(label=None, balls=8, badge="#1f6feb"):
@@ -64,6 +64,55 @@ def linear_svg(label="LM", badge="#1f6feb"):
     return "\n".join(parts) + "\n"
 
 
+def thrust_svg(label="511", badge="#1f6feb"):
+    """Thrust ball bearing seen from the side: two washers with balls between them."""
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">',
+        '<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1">'
+        '<stop offset="0" stop-color="#f4f6fa"/><stop offset="1" stop-color="#8a93a3"/></linearGradient></defs>',
+        '<rect x="3" y="8" width="58" height="11" rx="2" fill="url(#s)" stroke="#3b4250" stroke-width="2"/>',
+        '<rect x="3" y="33" width="58" height="11" rx="2" fill="url(#s)" stroke="#3b4250" stroke-width="2"/>',
+        # the bore through both washers
+        '<rect x="24" y="8" width="16" height="36" fill="#ffffff" stroke="#3b4250" stroke-width="1.5"/>',
+    ]
+    for x in (13.5, 50.5):
+        parts.append(
+            f'<circle cx="{x}" cy="26" r="7" fill="#e6e9ef" stroke="#3b4250" stroke-width="1.2"/>'
+        )
+    if label:
+        parts.append(f'<rect x="18" y="44" width="46" height="20" rx="4" fill="{badge}"/>')
+        parts.append(
+            f'<text x="41" y="59" font-family="Arial,Helvetica,sans-serif" font-size="13" '
+            f'font-weight="bold" fill="#ffffff" text-anchor="middle">{label}</text>'
+        )
+    parts.append("</svg>")
+    return "\n".join(parts) + "\n"
+
+
+def bom_svg():
+    """A parts list with a small bearing: the bill of materials."""
+    body = bearing_svg(balls=6).split("\n")
+    inner = "\n".join(body[1:-2])  # drop <svg>, </svg>
+    rows = "".join(
+        f'<rect x="30" y="{y}" width="28" height="4" rx="2" fill="#3b4250"/>' for y in (12, 22, 32)
+    )
+    return (
+        "\n".join(
+            [
+                '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">',
+                '<rect x="4" y="4" width="56" height="56" rx="5" fill="#ffffff" stroke="#3b4250" stroke-width="2"/>',
+                rows,
+                '<g transform="translate(6 30) scale(0.42)">',
+                inner,
+                "</g>",
+                '<rect x="30" y="44" width="20" height="4" rx="2" fill="#1f6feb"/>',
+                "</svg>",
+            ]
+        )
+        + "\n"
+    )
+
+
 def search_svg():
     """Small bearing under a magnifying glass."""
     body = bearing_svg(balls=7).split("\n")
@@ -93,8 +142,12 @@ if __name__ == "__main__":
             f.write(bearing_svg(s))
     with open(os.path.join(OUT, "Bearing_LM.svg"), "w") as f:
         f.write(linear_svg())
+    with open(os.path.join(OUT, "Bearing_511.svg"), "w") as f:
+        f.write(thrust_svg())
     with open(os.path.join(OUT, "PrintableBearing.svg"), "w") as f:
         f.write(bearing_svg("3D", balls=10, badge="#e8710a"))
+    with open(os.path.join(OUT, "BearingBOM.svg"), "w") as f:
+        f.write(bom_svg())
     with open(os.path.join(OUT, "BearingSearch.svg"), "w") as f:
         f.write(search_svg())
-    print("wrote", len(SERIES) + 4, "icons to", OUT)
+    print("wrote", len(SERIES) + 6, "icons to", OUT)

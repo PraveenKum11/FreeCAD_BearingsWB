@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<rect x="4" y="4" width="56" height="56" rx="5" fill="#ffffff" stroke="#3b4250" stroke-width="2"/>
+<rect x="30" y="12" width="28" height="4" rx="2" fill="#3b4250"/><rect x="30" y="22" width="28" height="4" rx="2" fill="#3b4250"/><rect x="30" y="32" width="28" height="4" rx="2" fill="#3b4250"/>
+<g transform="translate(6 30) scale(0.42)">
+<defs><radialGradient id="g" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#f4f6fa"/><stop offset="1" stop-color="#8a93a3"/></radialGradient></defs>
+<circle cx="32" cy="32" r="29" fill="url(#g)" stroke="#3b4250" stroke-width="2"/>
+<circle cx="32" cy="32" r="21" fill="#2c3340" stroke="#3b4250" stroke-width="1.5"/>
+<circle cx="32" cy="32" r="15" fill="url(#g)" stroke="#3b4250" stroke-width="1.5"/>
+<circle cx="32" cy="32" r="8" fill="#ffffff" stroke="#3b4250" stroke-width="2"/>
+<circle cx="50.00" cy="32.00" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="41.00" cy="47.59" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="23.00" cy="47.59" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="14.00" cy="32.00" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="23.00" cy="16.41" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+<circle cx="41.00" cy="16.41" r="3.2" fill="#e6e9ef" stroke="#3b4250" stroke-width="0.8"/>
+</g>
+<rect x="30" y="44" width="20" height="4" rx="2" fill="#1f6feb"/>
+</svg>
