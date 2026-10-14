@@ -86,7 +86,8 @@ on `Flanged` and pick a `FlangeShape`.
 They snap like bearings: select a rod end and the bushing slides onto it, or select a
 hole and it goes in. A flanged bushing (or flanged ball bearing) in a hole rests its
 flange on the face, with only the body in the hole. Plain bushings have their retaining
-ring grooves; **Standard** detail adds the seals and the rows of balls running on the rod.
+ring grooves. **Standard** detail adds the seals and the plastic ball retainer with a slot
+along each ball row; **Detailed** adds the balls, peeking out of the slots onto the rod.
 
 ## Find bearing
 
@@ -208,16 +209,26 @@ import BearingBase
 b = BearingBase.make_bearing("60", "608", Closure="2RS", DetailLevel="Detailed")
 ```
 
-## Data accuracy
+## Data sources and accuracy
 
-Boundary dimensions of series 60, 62, 63, 68, 69 and the inch R sizes were cross-checked
-against SKF's public table, and the LM bushings against two makers' public tables (see
-[PLAN.md](PLAN.md) §4.1). Shielded widths and flange dimensions of
-miniature bearings vary by vendor and are approximate: check `BRData/*.csv` against your
-supplier's sheet before relying on them for tight fits.
+The tables in `BRData/` hold only boundary dimensions: bore, outside diameter, width,
+corner radius, and the shielded width, flange, groove and bolt-hole sizes where they
+apply. Everything inside a bearing (ball size and count, raceways, cage) is computed, and
+no load ratings, speeds or other catalogue data are included.
 
-The repository holds no manufacturer catalogue data or tools to fetch it. PLAN.md records
-only the conclusions of those checks.
+| Table | Where the dimensions come from | Cross-checked against |
+|---|---|---|
+| Series 60, 62, 63, 68, 69 (`iso15_*.csv`) | ISO 15 boundary dimensions; shielded widths and flanges from common miniature listings | [SKF's public deep groove ball bearing table](https://www.skf.com/group/products/rolling-bearings/ball-bearings/deep-groove-ball-bearings): every size SKF sells matches, and corner radii were checked per bearing |
+| MR miniatures (`mr.csv`) | Common metric miniature listings (Minebea/NMB naming) | SKF's table for the closed widths |
+| Inch R (`inch_r.csv`) | ABMA inch dimensions, converted exactly (× 25.4) | SKF's table (R144, R166, R188, R3–R12) and the [MKL miniature bearing size chart](https://www.mklbearing.com/blog/miniature-bearing-size-chart_b54) (all sizes, FR flanges) |
+| LM linear bushings (`linear_lm.csv`) | The interchangeable "Asian standard" LM dimensions, from [Samick's linear bushing catalog](https://www.findling.com/fileadmin/Inhalt/PDFs/Kataloge/Samick_Linear_Bushing.pdf) (plain, long, LMF, LMK) | [G2k's LM table](https://www.euro-bearings.com/g2klm.htm) (plain) and [Tuli's LMK-LUU sheet](https://www.tuli-shop.com/media/custom/upload/LMK-LUU-Linear-Bearings.pdf) (square flange) |
+
+The details of each check, including the few values where sources disagree and which one
+we use, are in [PLAN.md](PLAN.md) §4.1.
+
+Shielded widths and flange dimensions of miniature bearings vary by vendor and are
+approximate: check `BRData/*.csv` against your supplier's sheet before relying on them for
+tight fits. The tables are plain CSV, so they are easy to correct.
 
 ## Development
 

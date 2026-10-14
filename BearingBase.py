@@ -90,7 +90,8 @@ class BearingObject:
             "DetailLevel",
             GROUP,
             "Envelope: one solid; Standard: rings, balls, shields or seals; "
-            "Detailed: adds a cage (linear bushings: same as Standard)",
+            "Detailed: adds a cage (linear bushings: Standard has the retainer, Detailed adds the "
+            "balls)",
         )
         obj.DetailLevel = BG.DETAIL_LEVELS
         obj.DetailLevel = "Standard"

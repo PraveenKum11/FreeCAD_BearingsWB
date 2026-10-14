@@ -370,7 +370,7 @@ def closures():
 
 
 def linear_bushings():
-    """LM8UU, LM8LUU, LMF8UU and LMK8UU, cut away, standing on end."""
+    """LM8UU, LM8LUU, LMF8UU and LMK8UU at Detailed level, cut away, standing on end."""
     cases = [
         ("LM8UU", False, "Round", "LM8UU"),
         ("LM8LUU", False, "Round", "LM8LUU (long)"),
@@ -383,7 +383,7 @@ def linear_bushings():
         w = (row.K if shape == "Square" else row.D1) if flanged else row.D
         x += w / 2
         pl = App.Placement(V(x, 0, 0), App.Rotation())
-        parts = standard_parts("LM", name, flanged=flanged, pl=pl, shape=shape)
+        parts = standard_parts("LM", name, flanged=flanged, detail="Detailed", pl=pl, shape=shape)
         items += cut_all(parts, quarter(V(x, 0, 0)))
         captions.append((caption, (x, 0, 0)))
         x += w / 2 + 12

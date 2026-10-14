@@ -283,8 +283,9 @@ formatter is Black-compatible). Static type checking is not set up yet (§10).
   LM5UU–LM60UU and LM6LUU–LM60LUU, flanged LMF (round) and LMK (square, corners trimmed to
   the round flange diameter) via `Flanged` + `FlangeShape`. Envelope: the sleeve with its
   retaining ring grooves (plain) or flange with counterbored bolt holes. Standard: adds a
-  seal at each end and one straight row of balls per circuit, running on the shaft.
-  Detailed is the same as Standard (no separate retainer). `Closure` is hidden for LM
+  seal at each end and the plastic ball retainer filling the space to the shaft, with a
+  slot along each ball row (slightly wider than a ball). Detailed: adds one straight row of
+  balls per circuit in the slots, running on the shaft. `Closure` is hidden for LM
   (always UU); `FlangeShape` is hidden for ball bearings. Not offered as printable bearings.
 - [x] **Inch R-series** (done 2026-10-14): series `R` (`BRData/inch_r.csv`): R144, R155,
   R156, R166, R168, R188, R1810, R2-5, R2-6, R2, R2A, R3, R3A, R4, R4A, R6, R8, R10, R12,
@@ -294,22 +295,12 @@ formatter is Black-compatible). Static type checking is not set up yet (§10).
   rests on the face and only the body goes into the hole (it used to sit half inside).
 
 ### v0.3: Fit and seat tools
-- **Seat cutter**: from a placed bearing, cut the pocket into the housing or turn the
-  shaft seat. Choose a fit: press / slide / 3D-print press (housing bore + 0.1–0.2 mm,
-  "crush ribs" option) or ISO fits (H7, J7 / k5, m6). Optional shoulder and DIN 471/472
-  circlip groove.
-  - Shoulder heights, fitted from SKF abutment data (146 bearings):
-    shaft shoulder `da_min ≈ d + 0.168·(D − d)` (range 0.11–0.23) and housing shoulder
-    `Da_max ≈ D − 0.170·(D − d)` (range 0.11–0.28). Fillet radius `ra_max = r` in 75 % of
-    cases; use `ra = r`, but never more than r.
 - Thrust ball bearings 511xx, small angular contact 7xx.
 - BOM export (CSV of all bearings with designation and quantity).
 
 ### v0.4: Wider coverage
 - Self-aligning 12/13/22/23, cylindrical NU/NJ, tapered 302/303/320 (ISO 355), needle
   NK/HK drawn cup, AXK thrust needle.
-- Approximate load rating C (ISO 281 formula from the computed internals, flagged as an
-  estimate) + simple L10 life calculator.
 
 ### v0.5: Units and release
 - Pillow blocks / flange units (UCP, UCF, UCFL, KP08/KFL08 for makers), rod ends,

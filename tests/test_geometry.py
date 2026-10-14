@@ -25,7 +25,8 @@ def expected_solids(row, closure, detail):
     if detail == "Envelope":
         return 1
     if BD.is_linear(row):
-        return 3 + BG.internals(row).Z  # sleeve, two seals, balls
+        # sleeve, two seals, retainer; Detailed adds the balls
+        return 4 + (BG.internals(row).Z if detail == "Detailed" else 0)
     top, bottom = BG._closure_sides(closure)
     return 2 + int(top) + int(bottom) + BG.Internals(row.d, row.D, row.B).Z
 

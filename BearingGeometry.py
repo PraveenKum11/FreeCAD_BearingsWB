@@ -86,6 +86,7 @@ COLOR_BALL = (0.86, 0.87, 0.90)
 COLOR_CAGE = (0.80, 0.62, 0.25)
 COLOR_SHIELD = (0.60, 0.61, 0.64)
 COLOR_SEAL = (0.12, 0.12, 0.12)
+COLOR_RETAINER = (0.22, 0.23, 0.26)  # plastic ball retainer of a linear bushing
 
 
 class Internals:
@@ -306,7 +307,10 @@ def make_deep_groove(row, closure, flanged, detail):
 
 class LinearInternals:
     """Ball rows of a linear bushing (simplified: one straight row of balls per circuit,
-    touching the shaft, between the seals). Same attribute names as Internals."""
+    touching the shaft, between the seals). Same attribute names as Internals.
+
+    The retainer fills the space between the shaft and the sleeve, with one slot per row
+    a little wider than a ball, so the balls show through without touching it."""
 
     def __init__(self, row):
         wall = (row.D - row.d) / 2
@@ -319,6 +323,9 @@ class LinearInternals:
         self.per_row = max(1, int((row.B - 2 * self.seal - 0.2) / self.pitch))
         self.rows = row.rows
         self.Z = self.rows * self.per_row
+        self.retainer_bore = row.d / 2 + max(0.05, 0.03 * self.Dw)  # radius, clear of the shaft
+        self.slot_width = 1.04 * self.Dw
+        self.row_length = self.per_row * self.pitch
 
 
 def internals(row):
@@ -374,11 +381,25 @@ def _linear_sleeve(row, flanged, shape, bore):
     return Part.Solid(sleeve.Solids[0]) if sleeve.Solids else sleeve
 
 
+def _retainer(row, ins):
+    """Plastic retainer between the seals: a tube from just off the shaft to the sleeve,
+    with a slot along each ball row."""
+    L, t = row.B, ins.seal
+    tube = _annulus(ins.retainer_bore, ins.sleeve_bore, -L + t, -t)
+    w, length = ins.slot_width, ins.row_length
+    slots = []
+    for k in range(ins.rows):
+        slot = Part.makeBox(ins.sleeve_bore + 1, w, length, V(0, -w / 2, -L / 2 - length / 2))
+        slot.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.rows)
+        slots.append(slot)
+    return tube.cut(Part.makeCompound(slots))
+
+
 def make_linear(row, flanged, shape, detail):
     """Return a list of (solid, rgb) for a linear ball bushing.
 
-    Envelope: the sleeve alone, bore = shaft. Standard and Detailed: the sleeve, a rubber
-    seal at each end and the rows of balls running on the shaft.
+    Envelope: the sleeve alone, bore = shaft. Standard: the sleeve, a rubber seal at each
+    end and the slotted ball retainer. Detailed: adds the rows of balls in the slots.
     """
     if detail == "Envelope":
         return [(_linear_sleeve(row, flanged, shape, row.d / 2), COLOR_STEEL)]
@@ -387,10 +408,11 @@ def make_linear(row, flanged, shape, detail):
     parts = [(_linear_sleeve(row, flanged, shape, ins.sleeve_bore), COLOR_STEEL)]
     for z0 in (-L, -t):
         parts.append((_annulus(row.d / 2, ins.sleeve_bore, z0, z0 + t), COLOR_SEAL))
-    rc = ins.dm / 2
-    used = ins.per_row * ins.pitch
-    z_first = -L / 2 - used / 2 + ins.pitch / 2
-    ball = Part.makeSphere(ins.Dw / 2, V(rc, 0, z_first))
+    parts.append((_retainer(row, ins), COLOR_RETAINER))
+    if detail != "Detailed":
+        return parts
+    z_first = -L / 2 - ins.row_length / 2 + ins.pitch / 2
+    ball = Part.makeSphere(ins.Dw / 2, V(ins.dm / 2, 0, z_first))
     for k in range(ins.rows):
         for i in range(ins.per_row):
             b = ball.copy()
