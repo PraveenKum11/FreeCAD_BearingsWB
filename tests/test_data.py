@@ -50,6 +50,43 @@ class Tables(unittest.TestCase):
                 self.assertEqual((r.d, r.D, r.B, r.r), (twin.d, twin.D, twin.B, twin.r), r.name)
                 self.assertFalse(r.has_flange)
 
+    def test_derived_series_match_their_source(self):
+        """ISO 15 gives 12 / 13 / NU2 / NU3 the dimensions of 62 / 63, NU22 / NU23 those of
+        the 22 / 23 table."""
+        for series, (source, prefix, min_bore) in BD.DERIVED.items():
+            base = {"62": "62", "63": "63", "22": "22", "23": "23"}[source]
+            base_series = {"62": "62", "63": "63", "22": "22", "23": "23"}[base]
+            for r in BD.load_table(series):
+                twin = BD.get_row(base_series, base + r.name[len(prefix) :])
+                with self.subTest(row=r.name):
+                    self.assertEqual((r.d, r.D, r.B), (twin.d, twin.D, twin.B))
+                    self.assertGreaterEqual(r.d, min_bore)
+
+    def test_wide_series_22_23(self):
+        """Series 22 / 23 share d and D with 62 / 63 and are wider."""
+        for wide, narrow in (("22", "62"), ("23", "63")):
+            for r in BD.load_table(wide):
+                twin = BD.get_row(narrow, "6" + narrow[1] + r.name[2:])
+                self.assertEqual((r.d, r.D), (twin.d, twin.D), r.name)
+                self.assertGreater(r.B, twin.B, r.name)
+
+    def test_tapered_table(self):
+        for series in ("302", "303", "320"):
+            for r in BD.load_table(series):
+                with self.subTest(row=r.name):
+                    self.assertTrue(r.name.startswith(series))
+                    self.assertTrue(r.cup_C < r.cone_B <= r.B, "C < B <= T")
+        r = BD.get_row("302", "30204")
+        self.assertEqual((r.d, r.D, r.B, r.cone_B, r.cup_C), (20, 47, 15.25, 14, 12))
+
+    def test_needle_tables(self):
+        self.assertEqual([r.name for r in BD.load_table("HK")][:2], ["HK0306", "HK0408"])
+        hk = BD.get_row("HK", "HK0810")
+        self.assertEqual((hk.d, hk.D, hk.B, hk.drawn), (8, 12, 10, True))
+        self.assertFalse(BD.get_row("NK", "NK10/16").drawn)
+        axk = BD.get_row("AXK", "AXK1528")
+        self.assertEqual((axk.d, axk.D, axk.B), (15, 28, 2))
+
     def test_thrust_table(self):
         rows = BD.load_table("511")
         self.assertEqual(rows[0].name, "51100")
@@ -82,6 +119,11 @@ class Designations(unittest.TestCase):
             "7204B": ("7204", None, False),
             "7204 BEP": ("7204", None, False),
             "51104": ("51104", None, False),
+            "NJ204": ("NU204", None, False),
+            "NU2205 ECP": ("NU2205", None, False),
+            "30204 J2/Q": ("30204", None, False),
+            "HK 0810": ("HK0810", None, False),
+            "AXK 1528": ("AXK1528", None, False),
         }
         for text, want in cases.items():
             with self.subTest(text=text):
@@ -103,7 +145,9 @@ class Search(unittest.TestCase):
 
     def test_by_size(self):
         self.assertTrue({"608", "688"} <= set(names(BD.search(d=8))), "by ID")
-        self.assertEqual(set(names(BD.search(D=22))), {"636", "627", "608", "6900"}, "by OD")
+        ball = {r.name for s, r in BD.search(D=22) if BD.family(s) == "deepgroove"}
+        self.assertEqual(ball, {"636", "627", "608", "6900"}, "by OD")
+        self.assertIn("HK1612", names(BD.search(D=22)), "needle bearings too")
         self.assertEqual(names(BD.search(name="8x22x7")), ["608"], "size text")
         self.assertIn("6801", names(BD.search(D=22, tol=1)), "tolerance")
 
@@ -112,7 +156,7 @@ class Search(unittest.TestCase):
             names(BD.search(name="LMK8")), ["LM8UU", "LM8LUU"], "flanged LM, by prefix"
         )
         self.assertEqual(names(BD.search(name="FR188")), ["R188"])
-        self.assertEqual(names(BD.search(d=8, D=15)), ["LM8UU", "LM8LUU"])
+        self.assertEqual(names(BD.search(d=8, D=15)), ["NK8/12", "LM8UU", "LM8LUU"], "by width")
 
     def test_angular_and_thrust(self):
         self.assertEqual(names(BD.search(name="7204 BEP")), ["7204"])

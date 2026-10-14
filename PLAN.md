@@ -64,6 +64,8 @@ FreeCAD_BearingsWB/
   tools/make_icons.py   icon generator
   tools/render_images.py  renders images/ in the FreeCAD GUI with the workbench's code
   tools/dev/            git-ignored: SKF cross-check and scraper, cache and output (never committed)
+  docs/                 the GitHub wiki (one Markdown file per page), images/ via a link
+  .github/workflows/wiki.yml  publishes docs/ and images/ to the wiki
 ```
 
 Layering rule: `BearingGeometry` depends only on `Part` and `FreeCAD.Vector`. `BearingBase`
@@ -92,6 +94,13 @@ Designation,d,D,B,r,B_shielded,D1,C1
 - Angular contact 72 / 73 have no CSV: the rows come from `iso15_62.csv` /
   `iso15_63.csv`. **Checked 2026-10-14**: all 41 SKF 72xx B / 73xx B sizes match those
   dimensions.
+- **v0.4 tables, checked 2026-10-14 against SKF's public tables** (bore, OD, width only):
+  `iso15_22.csv` / `iso15_23.csv` (ISO 15 dimension series 22 / 23) and the derived 12 /
+  13 / NU series all match; SKF has no 1300, 2300, NU200 / 201, NU300–302, NU2200–2202
+  or NU2300–2303, so those aren't derived. `tapered.csv` (ISO 355): d, D, T of all 55 rows
+  match SKF; the cone and cup widths B, C (not in SKF's list) and the radii match the PTI
+  and BKZ tables. `needle.csv`: HK1210 corrected to 12 × 16 × 10; HK0708 isn't sold by
+  SKF (unverified); everything else matches. `axk.csv`: all 17 rows match.
 - Inch R sizes (`inch_r.csv`) are the ABMA inch dimensions × 25.4. **Checked 2026-10-14**
   with `tools/dev/verify_skf.py`: R144, R166, R188, R3, R4, R4A and R12 match SKF exactly,
   and all closed widths match. Open widths differ for R6 (SKF 5.556 = exactly 7/32"; we
@@ -326,13 +335,36 @@ formatter is Black-compatible). Static type checking is not set up yet (§10).
   by diameter. Hidden objects skipped by default. Save as CSV.
 
 ### v0.4: Wider coverage
-- Self-aligning 12/13/22/23, cylindrical NU/NJ, tapered 302/303/320 (ISO 355), needle
-  NK/HK drawn cup, AXK thrust needle.
+- [x] **Self-aligning ball bearings 12 / 13 / 22 / 23** (done 2026-10-14), family
+  `selfaligning`: two rows of balls staggered by half a pitch, on a spherical outer
+  raceway centered on the axis at mid-width; two grooves in the inner ring.
+- [x] **Cylindrical roller bearings NU / NJ, series NU2 / NU3 / NU22 / NU23**, family
+  `cylindrical`: outer ring with two ribs; inner ring plain (NU) or with one rib at the
+  bottom (NJ), chosen with the `Variant` property.
+- [x] **Tapered roller bearings 302 / 303 / 320** (ISO 355), family `tapered`: cone
+  raceway, cup raceway and rollers are cones with one apex on the axis (above the
+  bearing), roller axis at 13°; the cone's back rib holds the rollers' large ends (its top
+  is lowered by r·sin θ for the tilted end faces).
+- [x] **Needle roller bearings HK (drawn cup) / NK (machined)**, family `needle`: no inner
+  ring, needles running on the shaft (d = Fw), lips / ribs at both ends.
+- [x] **AXK thrust needle assemblies**, family `axk`: cage (bore and OD are the
+  assembly's) with radial needles; `Variant` "AXK + 2 AS" adds a 1 mm AS washer on each
+  side (height + 2 mm; the BOM lists the washers).
+- Cages of these types aren't modelled: Detailed = Standard. Envelope is one ring.
+- Derived series (`BD.DERIVED`): 12 / 13 / NU2 / NU3 from the 62 / 63 tables, NU22 / NU23
+  from the new 22 / 23 tables, without the smallest sizes those types aren't made in.
+- **Toolbar**: one drop-down per family (`BearingsCmd.GROUPS`, FreeCAD group commands)
+  instead of one button per series (there are 30 series now); the menu has a submenu per
+  family.
 
-### v0.5: Units and release
-- Pillow blocks / flange units (UCP, UCF, UCFL, KP08/KFL08 for makers), rod ends,
-  KP/KFL lock collars.
-- wiki page
+### v0.5: Release
+- [x] **Wiki** (decided 2026-10-14: `docs/` + sync action): one Markdown page per feature
+  in `docs/` (Home, Installation, Getting started, the parts and tools pages, Scripting,
+  Data sources, Development, FAQ, sidebar, footer), image-heavy (19 images, rendered by
+  `tools/render_images.py`, including toolbar and property screenshots), published to
+  the GitHub wiki by `.github/workflows/wiki.yml` on every push to main (copies docs/ and
+  images/; the wiki must exist first). `docs/freecad-wiki.txt` is a draft of the
+  wiki.freecad.org page.
 
 ## 9. Risks and notes
 

@@ -91,11 +91,21 @@ def bom_items(doc, skip_hidden=True):
                 "Width (mm)": _num(obj.Width.Value),
             }
             key = (0, obj.FullDesignation)
-            if _visible(obj) or not skip_hidden:
-                add(key, values, 1, obj.Label)
-            for link, count in _links_to(obj, doc):
-                if _visible(link) or not skip_hidden:
-                    add(key, values, count, link.Label)
+            counted = [(obj, 1)] + list(_links_to(obj, doc))
+            counted = [(o, n) for o, n in counted if _visible(o) or not skip_hidden]
+            for o, n in counted:
+                add(key, values, n, o.Label)
+            if getattr(obj, "Variant", "") == "AXK + 2 AS":
+                # an AXK assembly with an AS washer on each side: the washers are bought too
+                washer = "AS" + obj.FullDesignation[3:]
+                washer_values = dict(
+                    values,
+                    Item=washer,
+                    Description="Thrust washer AS, %g mm" % BD.AS_WASHER,
+                    **{"Width (mm)": BD.AS_WASHER},
+                )
+                for o, n in counted:
+                    add((0, washer), washer_values, 2 * n, o.Label)
         elif is_printable_params(obj):
             body = obj.getParentGeoFeatureGroup()
             if skip_hidden and body is not None and not _visible(body):

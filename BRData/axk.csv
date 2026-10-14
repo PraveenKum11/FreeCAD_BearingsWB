@@ -1,0 +1,21 @@
+# Axial needle roller and cage assemblies AXK, mm. d = bore (shaft), D = outside
+# diameter, Dw = needle diameter (= assembly height). AS washers (thickness 1 mm, same
+# d and D) go on both sides.
+Designation,d,D,Dw
+AXK0414,4,14,2
+AXK0515,5,15,2
+AXK0619,6,19,2
+AXK0821,8,21,2
+AXK1024,10,24,2
+AXK1226,12,26,2
+AXK1528,15,28,2
+AXK1730,17,30,2
+AXK2035,20,35,2
+AXK2542,25,42,2
+AXK3047,30,47,2
+AXK3552,35,52,2
+AXK4060,40,60,3
+AXK4565,45,65,3
+AXK5070,50,70,3
+AXK5578,55,78,3
+AXK6085,60,85,3

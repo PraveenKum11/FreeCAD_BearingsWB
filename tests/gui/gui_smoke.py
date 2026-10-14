@@ -294,6 +294,21 @@ try:
         <= set(Gui.listCommands()),
         "angular, thrust and BOM commands",
     )
+    # v0.4: one toolbar drop-down per family
+    import BearingsCmd
+
+    expect(
+        set(BearingsCmd.GROUP_COMMANDS) <= set(Gui.listCommands())
+        and "Bearings_Insert_NU2" in Gui.listCommands(),
+        "family drop-downs registered",
+    )
+    from PySide import QtGui as _QG2
+
+    bars = [
+        t for t in Gui.getMainWindow().findChildren(_QG2.QToolBar) if t.windowTitle() == "Bearings"
+    ]
+    n_buttons = len([a for a in bars[0].actions() if a.isVisible()]) if bars else 0
+    expect(n_buttons == len(BearingsCmd.GROUPS), "Bearings toolbar: %d buttons" % n_buttons)
     log("RESULT", "PASS" if not problems else "FAIL (%d)" % len(problems))
     log("OK")
 except Exception:

@@ -420,6 +420,302 @@ def make_thrust(row, detail):
     return parts
 
 
+# ---------------------------------------------------------------- v0.4 bearing types
+# Self-aligning ball, cylindrical roller, tapered roller, needle roller and axial needle
+# bearings. Envelope is always one ring d x D x B. Their cages are not modelled:
+# Detailed is the same as Standard.
+
+NEEDLES = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0]  # common needle roller diameters
+
+
+def _largest(sizes, limit, fallback):
+    fitting = [x for x in sizes if x <= limit + 1e-9]
+    return fitting[-1] if fitting else round(fallback, 3)
+
+
+def _count(pitch_radius, size, spacing):
+    """Most rolling elements of `size` around a circle with the given spacing factor."""
+    return max(
+        3, int(math.floor(math.pi / math.asin(min(1.0, spacing * size / (2 * pitch_radius)))))
+    )
+
+
+class SelfAligningInternals:
+    """Two rows of balls, staggered by half a pitch, on a spherical outer raceway centered
+    on the axis at mid-width; two grooves in the inner ring."""
+
+    def __init__(self, row):
+        d, D, B = row.d, row.D, row.B
+        wall = (D - d) / 2
+        self.dm = (d + D) / 2
+        self.Dw = _largest(STANDARD_BALLS, min(0.5 * wall, 0.42 * B), 0.42 * B)
+        # axial offset of each row from the middle: the rows must not touch, and the balls
+        # must stay inside the width
+        while True:
+            self.a = min(0.56 * self.Dw, B / 2 - self.Dw / 2 - 0.04 * B)
+            if self.a >= 0.5 * self.Dw or self.Dw < 0.5:
+                break
+            self.Dw = _largest(STANDARD_BALLS, self.Dw - 1e-6, self.Dw * 0.9)
+        self.per_row = _count(self.dm / 2, self.Dw, 1.08)
+        self.Z = 2 * self.per_row
+        self.R_outer = math.hypot(self.dm / 2, self.a) + self.Dw / 2  # sphere radius
+        self.r_groove = 0.53 * self.Dw
+        self.x_shoulder = self.dm / 2 - 0.32 * self.Dw
+
+
+def make_selfaligning(row, detail):
+    B = row.B
+    if detail == "Envelope":
+        return [(_annulus(row.d / 2, row.D / 2, -B, 0), COLOR_STEEL)]
+    ins = SelfAligningInternals(row)
+    zc, Dw, rc, xs = -B / 2, ins.Dw, ins.dm / 2, ins.x_shoulder
+    xg = rc - Dw / 2 + ins.r_groove  # groove arc centers (radial)
+    h = math.sqrt(ins.r_groove**2 - (xg - xs) ** 2)
+    rb = min(row.r, 0.4 * (xs - row.d / 2))
+    items = [("p", row.d / 2, -B, rb), ("p", xs, -B, 0)]
+    for z in (zc - ins.a, zc + ins.a):
+        items += [("p", xs, z - h, 0), ("a", rc - Dw / 2, z), ("p", xs, z + h, 0)]
+    items += [("p", xs, 0, 0), ("p", row.d / 2, 0, rb)]
+    inner = revolve(items)
+    Ro = ins.R_outer
+    x_end = math.sqrt(Ro**2 - (B / 2) ** 2)  # sphere radius at the faces
+    ro = min(row.r, 0.4 * (row.D / 2 - Ro))
+    outer = revolve(
+        [
+            ("p", x_end, -B, 0),
+            ("p", row.D / 2, -B, ro),
+            ("p", row.D / 2, 0, ro),
+            ("p", x_end, 0, 0),
+            ("a", Ro, zc),
+        ]
+    )
+    parts = [(inner, COLOR_STEEL), (outer, COLOR_STEEL)]
+    for z, offset in ((zc - ins.a, 0.0), (zc + ins.a, 180.0 / ins.per_row)):
+        ball = Part.makeSphere(Dw / 2, V(rc, 0, z))
+        for k in range(ins.per_row):
+            b = ball.copy()
+            b.rotate(V(0, 0, 0), V(0, 0, 1), offset + 360.0 * k / ins.per_row)
+            parts.append((b, COLOR_BALL))
+    return parts
+
+
+class CylindricalInternals:
+    """Cylindrical rollers between an outer ring with two ribs and an inner ring (NU: no
+    ribs; NJ: one rib, at the bottom)."""
+
+    def __init__(self, row):
+        wall = (row.D - row.d) / 2
+        self.dm = (row.d + row.D) / 2
+        self.Dw = _largest(STANDARD_BALLS, 0.5 * wall, 0.5 * wall)  # roller diameter
+        self.rib = 0.15 * row.B  # rib width
+        self.Lw = row.B - 2 * self.rib - 0.04 * row.B  # roller length
+        self.Z = _count(self.dm / 2, self.Dw, 1.12)
+
+
+def make_cylindrical(row, variant, detail):
+    B = row.B
+    if detail == "Envelope":
+        return [(_annulus(row.d / 2, row.D / 2, -B, 0), COLOR_STEEL)]
+    ins = CylindricalInternals(row)
+    rp, Dw, t = ins.dm / 2, ins.Dw, ins.rib
+    Ro, Ri = rp + Dw / 2, rp - Dw / 2
+    r_rib_out, r_rib_in = rp + 0.15 * Dw, rp - 0.15 * Dw
+    outer = revolve(
+        [
+            ("p", r_rib_out, -B, 0),
+            ("p", row.D / 2, -B, 0),
+            ("p", row.D / 2, 0, 0),
+            ("p", r_rib_out, 0, 0),
+            ("p", r_rib_out, -t, 0),
+            ("p", Ro, -t, 0),
+            ("p", Ro, -B + t, 0),
+            ("p", r_rib_out, -B + t, 0),
+        ]
+    )
+    if variant == "NJ":
+        inner = revolve(
+            [
+                ("p", row.d / 2, -B, 0),
+                ("p", r_rib_in, -B, 0),
+                ("p", r_rib_in, -B + t, 0),
+                ("p", Ri, -B + t, 0),
+                ("p", Ri, 0, 0),
+                ("p", row.d / 2, 0, 0),
+            ]
+        )
+    else:
+        inner = _annulus(row.d / 2, Ri, -B, 0)
+    parts = [(inner, COLOR_STEEL), (outer, COLOR_STEEL)]
+    roller = Part.makeCylinder(0.998 * Dw / 2, ins.Lw, V(rp, 0, -B / 2 - ins.Lw / 2))
+    for k in range(ins.Z):
+        r = roller.copy()
+        r.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.Z)
+        parts.append((r, COLOR_BALL))
+    return parts
+
+
+class TaperedInternals:
+    """Tapered rollers between a cone (inner ring, back rib at the bottom) and a cup
+    (outer ring, top). The cone raceway, the cup raceway and every roller are cones with
+    one common apex on the bearing axis, above the bearing, as in a real tapered bearing.
+
+    Frame: z in [-T, 0]; the cone occupies [-T, -T + B], the cup [-C, 0]."""
+
+    def __init__(self, row, theta=13.0):
+        d, D, T, B, C = row.d, row.D, row.B, row.cone_B, row.cup_C
+        self.dm = (d + D) / 2
+        self.theta = math.radians(theta)  # roller axis to bearing axis
+        overlap_lo, overlap_hi = -C, -T + B  # where both rings are
+        self.z_mid = (overlap_lo + overlap_hi) / 2
+        self.Lw = 0.8 * (overlap_hi - overlap_lo) / math.cos(self.theta)  # roller length
+        self.Dw = 0.2 * (D - d)  # mean roller diameter
+        rp = self.dm / 2
+        self.s_mid = rp / math.sin(self.theta)  # apex to roller center
+        self.z_apex = self.z_mid + rp / math.tan(self.theta)
+        self.gamma = math.asin(self.Dw / 2 / self.s_mid)  # roller half angle
+        self.alpha = self.theta + self.gamma  # cup raceway to axis
+        self.beta = self.theta - self.gamma  # cone raceway to axis
+        self.Z = _count(rp, self.Dw, 1.2)
+        # back rib: from the cone's back face to just below the rollers' large ends. The
+        # end face is square to the tilted roller axis, so its inner edge reaches
+        # r_large * sin(theta) below the end's center.
+        z_large = self.z_mid - self.Lw / 2 * math.cos(self.theta)
+        r_large = (self.s_mid + self.Lw / 2) * math.sin(self.gamma)
+        self.rib_top = z_large - r_large * math.sin(self.theta) - 0.03 * T
+
+    def cup_r(self, z):
+        return (self.z_apex - z) * math.tan(self.alpha)
+
+    def cone_r(self, z):
+        return (self.z_apex - z) * math.tan(self.beta)
+
+
+def make_tapered(row, detail):
+    T, B, C = row.B, row.cone_B, row.cup_C
+    if detail == "Envelope":
+        return [(_annulus(row.d / 2, row.D / 2, -T, 0), COLOR_STEEL)]
+    ins = TaperedInternals(row)
+    cup = revolve(
+        [
+            ("p", ins.cup_r(0), 0, 0),
+            ("p", row.D / 2, 0, 0),
+            ("p", row.D / 2, -C, 0),
+            ("p", ins.cup_r(-C), -C, 0),
+        ]
+    )
+    z_top = -T + B
+    rib_r = ins.cone_r(ins.rib_top) + 0.55 * ins.Dw  # the rib holds the rollers' large ends
+    cone = revolve(
+        [
+            ("p", row.d / 2, -T, 0),
+            ("p", rib_r, -T, 0),
+            ("p", rib_r, ins.rib_top, 0),
+            ("p", ins.cone_r(ins.rib_top), ins.rib_top, 0),
+            ("p", ins.cone_r(z_top), z_top, 0),
+            ("p", row.d / 2, z_top, 0),
+        ]
+    )
+    parts = [(cone, COLOR_STEEL), (cup, COLOR_STEEL)]
+    # one roller: a frustum on the roller axis, its radius growing with the distance
+    # from the apex (s * sin(gamma)), a little smaller so it doesn't touch the raceways
+    axis = V(math.sin(ins.theta), 0, -math.cos(ins.theta))
+    apex = V(0, 0, ins.z_apex)
+    s1, s2 = ins.s_mid - ins.Lw / 2, ins.s_mid + ins.Lw / 2
+    k = 0.98 * math.sin(ins.gamma)
+    roller = Part.makeCone(s1 * k, s2 * k, ins.Lw, apex + axis * s1, axis)
+    for i in range(ins.Z):
+        r = roller.copy()
+        r.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * i / ins.Z)
+        parts.append((r, COLOR_BALL))
+    return parts
+
+
+class NeedleInternals:
+    """Needle rollers running on the shaft (d = Fw) inside a ring: a thin drawn cup (HK)
+    or a machined ring (NK), with a lip / rib at each end holding the needles."""
+
+    def __init__(self, row):
+        wall = (row.D - row.d) / 2
+        self.Dw = _largest(NEEDLES, 0.75 * wall, 0.6 * wall)
+        self.dm = row.d + self.Dw
+        self.shell = wall - self.Dw  # radial ring thickness outside the needles
+        self.lip = max(0.3, self.shell) if row.drawn else max(0.5, 0.12 * row.B)
+        self.Lw = row.B - 2 * self.lip - 0.2  # needle length
+        self.Z = _count(self.dm / 2, self.Dw, 1.06)
+
+
+def make_needle(row, detail):
+    C = row.B
+    if detail == "Envelope":
+        return [(_annulus(row.d / 2, row.D / 2, -C, 0), COLOR_STEEL)]
+    ins = NeedleInternals(row)
+    r_lip = row.d / 2 + 0.45 * ins.Dw  # the lips come down past the needle centers
+    r_race = row.D / 2 - ins.shell
+    t = ins.lip
+    ring = revolve(
+        [
+            ("p", r_lip, -C, 0),
+            ("p", row.D / 2, -C, 0),
+            ("p", row.D / 2, 0, 0),
+            ("p", r_lip, 0, 0),
+            ("p", r_lip, -t, 0),
+            ("p", r_race, -t, 0),
+            ("p", r_race, -C + t, 0),
+            ("p", r_lip, -C + t, 0),
+        ]
+    )
+    parts = [(ring, COLOR_STEEL)]
+    needle = Part.makeCylinder(0.998 * ins.Dw / 2, ins.Lw, V(ins.dm / 2, 0, -C / 2 - ins.Lw / 2))
+    for k in range(ins.Z):
+        n = needle.copy()
+        n.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.Z)
+        parts.append((n, COLOR_BALL))
+    return parts
+
+
+class AxialNeedleInternals:
+    """AXK: radial needles in a flat cage between the shaft and housing faces (or two AS
+    washers). B is the needle diameter."""
+
+    def __init__(self, row):
+        self.Dw = row.B
+        self.dm = (row.d + row.D) / 2
+        self.cage_in = row.d / 2  # an AXK's bore and outside diameter are the cage's
+        self.cage_out = row.D / 2
+        self.Lw = self.cage_out - self.cage_in - 1.6  # needle length (radial)
+        self.Z = _count(self.cage_in + 0.8, self.Dw, 1.3)
+
+
+def make_axk(row, washers, detail):
+    """`washers`: add an AS washer (1 mm) on each side; the height grows by 2 mm."""
+    w = 1.0 if washers else 0.0  # BD.AS_WASHER
+    H = row.B + 2 * w
+    if detail == "Envelope":
+        return [(_annulus(row.d / 2, row.D / 2, -H, 0), COLOR_STEEL)]
+    ins = AxialNeedleInternals(row)
+    zc, Dw = -H / 2, ins.Dw
+    tc = 0.6 * Dw  # cage thickness, thinner than the needles
+    cage = _annulus(ins.cage_in, ins.cage_out, zc - tc / 2, zc + tc / 2)
+    r0 = ins.cage_in + 0.8
+    pockets = []
+    for k in range(ins.Z):
+        p = Part.makeBox(
+            ins.Lw + 0.2, 1.06 * Dw, tc + 0.2, V(r0 - 0.1, -0.53 * Dw, zc - tc / 2 - 0.1)
+        )
+        p.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.Z)
+        pockets.append(p)
+    parts = [(cage.cut(Part.makeCompound(pockets)), COLOR_CAGE)]
+    needle = Part.makeCylinder(0.998 * Dw / 2, ins.Lw, V(r0, 0, zc), V(1, 0, 0))
+    for k in range(ins.Z):
+        n = needle.copy()
+        n.rotate(V(0, 0, 0), V(0, 0, 1), 360.0 * k / ins.Z)
+        parts.append((n, COLOR_BALL))
+    if washers:
+        parts.append((_annulus(row.d / 2, row.D / 2, -H, -H + w), COLOR_STEEL))
+        parts.append((_annulus(row.d / 2, row.D / 2, -w, 0), COLOR_STEEL))
+    return parts
+
+
 # ---------------------------------------------------------------- linear bushings
 
 
@@ -446,10 +742,22 @@ class LinearInternals:
         self.row_length = self.per_row * self.pitch
 
 
+_INTERNALS = {
+    "selfaligning": SelfAligningInternals,
+    "cylindrical": CylindricalInternals,
+    "tapered": TaperedInternals,
+    "needle": NeedleInternals,
+    "axk": AxialNeedleInternals,
+}
+
+
 def internals(row):
-    """Internals of any row: radial ball bearing, thrust bearing or linear bushing."""
+    """Internals of any row: ball, roller and needle bearings and linear bushings."""
     if getattr(row, "is_thrust", False):
         return ThrustInternals(row)
+    kind = getattr(row, "kind", None)
+    if kind in _INTERNALS:
+        return _INTERNALS[kind](row)
     return (
         LinearInternals(row) if getattr(row, "is_linear", False) else Internals(row.d, row.D, row.B)
     )
@@ -545,17 +853,29 @@ def make_linear(row, flanged, shape, detail):
 _shape_cache = {}
 
 
-def build(row, closure, flanged, detail, flange_shape="Round"):
+def build(row, closure, flanged, detail, flange_shape="Round", variant=None):
     """Return (shape, face_colors) for a table row. Results are cached.
 
-    `flange_shape` ("Round" or "Square") applies to flanged linear bushings only."""
+    `flange_shape` ("Round" or "Square") applies to flanged linear bushings only.
+    `variant`: "NU" / "NJ" for cylindrical roller bearings, "AXK + 2 AS" for an AXK with
+    its washers."""
     flanged = bool(flanged and row.has_flange)
     linear = getattr(row, "is_linear", False)
+    kind = getattr(row, "kind", None)
     key = (row.name, row.d, row.D, row.B, row.B_shielded, row.D1, row.C1, closure, flanged, detail)
-    if linear:
-        key += (flange_shape,)
+    key += (flange_shape, variant)
     if key not in _shape_cache:
-        if linear:
+        if kind == "selfaligning":
+            parts = make_selfaligning(row, detail)
+        elif kind == "cylindrical":
+            parts = make_cylindrical(row, variant, detail)
+        elif kind == "tapered":
+            parts = make_tapered(row, detail)
+        elif kind == "needle":
+            parts = make_needle(row, detail)
+        elif kind == "axk":
+            parts = make_axk(row, variant == "AXK + 2 AS", detail)
+        elif linear:
             parts = make_linear(row, flanged, flange_shape, detail)
         elif getattr(row, "is_thrust", False):
             parts = make_thrust(row, detail)

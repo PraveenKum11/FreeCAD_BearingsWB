@@ -301,3 +301,42 @@ class AngularAndThrust(DocumentTest):
         bb = tight_bb(b.Shape)
         self.assertTrue(close(bb.ZMax, 40, 0.01) and close(bb.ZMin, 30, 0.01), (bb.ZMin, bb.ZMax))
         self.assertLess(b.Shape.common(shaft.Shape).Volume, 1e-3, "washers clear the shaft")
+
+
+class V04Types(DocumentTest):
+    def test_cylindrical_variant(self):
+        b = BearingBase.make_bearing("NU2", "NU204", doc=self.doc)
+        self.assertEqual(b.Variant, "NU")
+        self.assertNotIn("Hidden", b.getEditorMode("Variant"))
+        b.Variant = "NJ"
+        self.doc.recompute()
+        self.assertEqual((b.FullDesignation, b.Label), ("NJ204", "NJ204"))
+        b.Series = "60"
+        self.doc.recompute()
+        self.assertIn("Hidden", b.getEditorMode("Variant"))
+
+    def test_needle_on_a_shaft(self):
+        shaft = self.doc.addObject("Part::Feature", "Shaft")
+        shaft.Shape = Part.makeCylinder(4, 30)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "HK", attach_to=(shaft, [find_circle(shaft, 4, 30)]), doc=self.doc
+        )
+        self.assertEqual((b.MatchTo, b.FullDesignation), ("Shaft", "HK0808"))
+        self.assertLess(b.Shape.common(shaft.Shape).Volume, 1e-3, "needles run on the shaft")
+
+    def test_axk_washers(self):
+        b = BearingBase.make_bearing("AXK", "AXK1528", doc=self.doc)
+        self.assertTrue(close(b.Width.Value, 2))
+        b.Variant = "AXK + 2 AS"
+        self.doc.recompute()
+        self.assertTrue(close(b.Width.Value, 4) and close(tight_bb(b.Shape).ZLength, 4, 0.01))
+
+    def test_tapered_and_self_aligning(self):
+        t = BearingBase.make_bearing("302", "30204", doc=self.doc)
+        self.assertTrue(
+            close(t.Width.Value, 15.25) and close(tight_bb(t.Shape).ZLength, 15.25, 0.01)
+        )
+        s = BearingBase.make_bearing("12", "1205", doc=self.doc, Closure="2RS")
+        self.assertEqual(s.FullDesignation, "1205", "no closure codes")
+        self.assertIn("Hidden", s.getEditorMode("Closure"))

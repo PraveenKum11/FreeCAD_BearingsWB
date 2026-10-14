@@ -14,6 +14,8 @@ Tested with FreeCAD 1.1. Inspired by
 - **Standard bearings**: deep groove series 60, 62, 63, 68, 69, MR miniatures and inch
   R sizes, with shields, seals and flanges, sized automatically from the edge you click.
 - **Angular contact and thrust bearings**: 72xx B / 73xx B and 511xx.
+- **Self-aligning, cylindrical, tapered and needle roller bearings**: 12 / 13 / 22 / 23,
+  NU / NJ, 302 / 303 / 320, HK and NK, and AXK thrust needle assemblies.
 - **Linear bushings**: LM8UU and friends, long, round-flanged and square-flanged.
 - **Find bearing**: search by name, bore, outside diameter or height.
 - **3D-printable bearings**: races, a snap-in cage and balls as separate PartDesign
@@ -22,8 +24,10 @@ Tested with FreeCAD 1.1. Inspired by
 
 ## Standard bearings
 
-Pick a series on the **Bearings** toolbar. You get a maker-friendly default (608, 625,
-6300, 688, 695, MR105, R188), and every option is a property you can change later.
+The **Bearings** toolbar has one drop-down button per family (deep groove, angular
+contact, self-aligning, cylindrical, tapered, needle, thrust, linear); the **Bearings**
+menu lists every series by family. You get a common default size (608, 625, R188, NU204,
+30204, HK0810, …), and every option is a property you can change later.
 
 | Series | What it is | Example |
 |---|---|---|
@@ -36,6 +40,11 @@ Pick a series on the **Bearings** toolbar. You get a maker-friendly default (608
 | **R** | Inch miniature | R188 (1/4" × 1/2" × 1/8"), fidget spinners and RC; FR188 flanged |
 | **72**, **73** | Angular contact, 40° (B) | 7204B: same size as a 6204, takes axial load from one side |
 | **511** | Thrust ball bearing | 51104 (20 × 35 × 10): turntables, lazy susans, axial loads |
+| **12**, **13**, **22**, **23** | Self-aligning ball bearing | 1205: tolerates a shaft that isn't quite aligned |
+| **NU2**, **NU3**, **NU22**, **NU23** | Cylindrical roller bearing, NU or NJ (`Variant`) | NU204: high radial loads |
+| **302**, **303**, **320** | Tapered roller bearing | 30204: wheel hubs, combined loads |
+| **HK**, **NK** | Needle roller bearing without inner ring | HK0810 (8 × 12 × 10): runs right on the shaft |
+| **AXK** | Thrust needle roller and cage assembly, optional AS washers (`Variant`) | AXK1528 |
 
 ### Closures and flanges
 
@@ -89,6 +98,22 @@ adds the cage.
   <img src="images/angular-thrust.png" width="860" alt="6204, 7204B and 51104 cut away">
 </p>
 
+### Roller and needle bearings
+
+**Self-aligning** ball bearings have two rows of balls on a spherical outer raceway.
+**Cylindrical** roller bearings come as NU (ribs on the outer ring only, so the shaft can
+move axially) or NJ (one rib on the inner ring too); switch with `Variant`. **Tapered**
+roller bearings are drawn with their real geometry: cone, cup and rollers share one apex
+on the axis, and the cone's back rib holds the rollers' large ends. **HK** drawn cups and
+**NK** needle bearings have no inner ring: select the shaft and the needles run right on
+it. **AXK** assemblies are the cage with its needles; set `Variant` to add an AS washer on
+each side (the BOM then lists the washers too). Their cages aren't modelled, so Detailed
+looks like Standard.
+
+<p align="center">
+  <img src="images/more-types.png" width="760" alt="2205, NU2205, NJ2205, 30205, HK2520 and AXK2542 cut away">
+</p>
+
 ## Linear bushings
 
 The **LM** button inserts linear ball bushings for smooth rods: **LM8UU** (8 × 15 × 24, the
@@ -100,7 +125,7 @@ on `Flanged` and pick a `FlangeShape`.
   <img src="images/linear-bushings.png" width="860" alt="LM8UU, LM8LUU, LMF8UU and LMK8UU cut away, showing the seals and the rows of balls">
 </p>
 
-They snap like bearings: select a rod end and the bushing slides onto it, or select a
+They snap like bearings: select the end of a rod and the bushing slides onto it, or select a
 hole and it goes in. A flanged bushing (or flanged ball bearing) in a hole rests its
 flange on the face, with only the body in the hole. Plain bushings have their retaining
 ring grooves. **Standard** detail adds the seals and the plastic ball retainer with a slot
@@ -251,6 +276,10 @@ no load ratings, speeds or other catalogue data are included.
 | Series 60, 62, 63, 68, 69 (`iso15_*.csv`) | ISO 15 boundary dimensions; shielded widths and flanges from common miniature listings | [SKF's public deep groove ball bearing table](https://www.skf.com/group/products/rolling-bearings/ball-bearings/deep-groove-ball-bearings): every size SKF sells matches, and corner radii were checked per bearing |
 | MR miniatures (`mr.csv`) | Common metric miniature listings (Minebea/NMB naming) | SKF's table for the closed widths |
 | Thrust 511 (`thrust_511.csv`) | ISO 104 boundary dimensions, dimension series 11 | SKF's public thrust ball bearing table: every row matches |
+| Series 22, 23 (`iso15_22.csv`, `iso15_23.csv`) | ISO 15 dimension series 22 / 23 | SKF's self-aligning and cylindrical roller tables |
+| Self-aligning 12 / 13, cylindrical NU2 / NU3 / NU22 / NU23 | Taken from the 62 / 63 / 22 / 23 tables (ISO 15 shares the boundary dimensions) | SKF's self-aligning and cylindrical roller tables: all sizes match |
+| Tapered 302 / 303 / 320 (`tapered.csv`) | ISO 355 boundary dimensions | d, D, T: SKF's tapered roller table; cone and cup widths: the [PTI](https://pti.eu/pdf/lejer/taperoller/30200.pdf) and [BKZ](https://bkzindustry.com/blogs/tapered-roller-bearing-size-chart/) tables |
+| Needle HK / NK, AXK (`needle.csv`, `axk.csv`) | Common needle bearing dimensions | SKF's needle roller and needle thrust tables (all but HK0708, which SKF doesn't list) |
 | Angular contact 72 / 73 | Taken from the 62 / 63 tables (ISO 15 gives them the same boundary dimensions) | SKF's angular contact table: all 41 B sizes match |
 | Inch R (`inch_r.csv`) | ABMA inch dimensions, converted exactly (× 25.4) | SKF's table (R144, R166, R188, R3–R12) and the [MKL miniature bearing size chart](https://www.mklbearing.com/blog/miniature-bearing-size-chart_b54) (all sizes, FR flanges) |
 | LM linear bushings (`linear_lm.csv`) | The interchangeable "Asian standard" LM dimensions, from [Samick's linear bushing catalog](https://www.findling.com/fileadmin/Inhalt/PDFs/Kataloge/Samick_Linear_Bushing.pdf) (plain, long, LMF, LMK) | [G2k's LM table](https://www.euro-bearings.com/g2klm.htm) (plain) and [Tuli's LMK-LUU sheet](https://www.tuli-shop.com/media/custom/upload/LMK-LUU-Linear-Bearings.pdf) (square flange) |
@@ -264,7 +293,8 @@ tight fits. The tables are plain CSV, so they are easy to correct.
 
 ## Development
 
-The roadmap and design decisions are in [PLAN.md](PLAN.md).
+The roadmap and design decisions are in [PLAN.md](PLAN.md). The user documentation is the
+GitHub wiki, kept in [`docs/`](docs/) and published by the `Publish wiki` workflow.
 
 Headless tests (`unittest`, run inside FreeCAD's own Python, about 2 minutes):
 

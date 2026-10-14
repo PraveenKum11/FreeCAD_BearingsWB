@@ -1,0 +1,51 @@
+{{Workbench
+|Name=Bearings
+|Icon=BearingsWB.svg
+|Author=Praveen Kumar
+|Version=1.0.0
+|FCVersion=1.0 and above
+|Download=https://github.com/<you>/<repository>
+|License=GPL-3.0-or-later
+|Description=Parametric bearings for makers: deep groove, angular contact, thrust, self-aligning, cylindrical, tapered and needle roller bearings and linear bushings, sized from the edge you click; 3D-printable bearings; bearing search and BOM.
+}}
+
+== Description ==
+The Bearings workbench inserts parametric bearings that stay attached to the hole or
+shaft edge you select, sized to fit it. It also designs fully parametric 3D-printable
+deep groove ball bearings (races, snap-in cage and balls as PartDesign bodies).
+
+[[Image:Bearings_hero.png|800px]]
+
+== Installation ==
+Install it with the [[Std_AddonMgr|Addon Manager]] (once listed), or clone the repository
+into the {{FileName|Mod}} folder of your [[Interface_Customization|user data folder]] as
+{{FileName|Bearings}} and restart FreeCAD.
+
+== Tools ==
+* '''Bearings''' toolbar: one drop-down per family:
+** Deep groove ball bearings: series 60, 62, 63, 68, 69, MR, inch R; Open / Z / ZZ / RS / 2RS, flanged F / MF / FR
+** Angular contact 72 B / 73 B, self-aligning 12 / 13 / 22 / 23
+** Cylindrical roller NU / NJ, tapered roller 302 / 303 / 320
+** Needle roller HK / NK, thrust 511 and AXK
+** Linear bushings LM, LMF, LMK
+* '''Bearing tools''' toolbar:
+** '''Find bearing''': search by name, bore, outside diameter or height
+** '''3D-printable bearing''': task panel with live preview; create races, groove a body, or replace a standard bearing
+** '''Bearing BOM''': every bearing in the document, counted; save as CSV
+
+== Usage ==
+# Select the edge of a hole or the end of a shaft (or nothing).
+# Pick a series from the Bearings toolbar.
+# Change size, closure, flange or detail level in the [[Property_editor|property editor]].
+
+Properties: Series, Designation (or Auto), Closure, Flanged, FlangeShape, Variant,
+DetailLevel (Envelope / Standard / Detailed), MatchTo, BaseObject, Invert, Offset.
+
+== Documentation ==
+See the workbench's GitHub wiki: https://github.com/<you>/<repository>/wiki
+
+== Links ==
+* Source: https://github.com/<you>/<repository>
+* Forum thread: (add once posted)
+
+[[Category:External Workbenches]]

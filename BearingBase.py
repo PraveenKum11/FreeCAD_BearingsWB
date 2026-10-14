@@ -85,13 +85,14 @@ class BearingObject:
             "Flanged outer ring (F/MF/FR miniatures; LMF/LMK linear bushings)",
         )
         self._add_flange_shape(obj)
+        self._add_variant(obj)
         obj.addProperty(
             "App::PropertyEnumeration",
             "DetailLevel",
             GROUP,
-            "Envelope: one solid; Standard: rings, balls, shields or seals; "
-            "Detailed: adds a cage (linear bushings: Standard has the retainer, Detailed adds the "
-            "balls)",
+            "Envelope: one solid; Standard: rings, rolling elements, shields or seals; "
+            "Detailed: adds a cage on ball bearings (linear bushings: Standard has the "
+            "retainer, Detailed adds the balls; roller and needle bearings: as Standard)",
         )
         obj.DetailLevel = BG.DETAIL_LEVELS
         obj.DetailLevel = "Standard"
@@ -151,15 +152,38 @@ class BearingObject:
         obj.FlangeShape = "Round"
 
     @staticmethod
+    def _add_variant(obj):
+        obj.addProperty(
+            "App::PropertyEnumeration",
+            "Variant",
+            GROUP,
+            "Cylindrical roller bearings: NU (ribs on the outer ring only) or NJ (one rib on "
+            "the inner ring too). AXK: with or without an AS washer on each side",
+        )
+        BearingObject._set_variants(obj)
+
+    @staticmethod
+    def _set_variants(obj):
+        """The Variant choices of the series' family (keeps the current one if it fits)."""
+        if not hasattr(obj, "Variant"):
+            return
+        choices = BD.VARIANTS.get(BD.family(obj.Series), ["Standard"])
+        current = obj.Variant if obj.Variant in choices else choices[0]
+        obj.Variant = choices
+        obj.Variant = current
+
+    @staticmethod
     def _update_editor_modes(obj):
         """Show only the properties that apply to the series' family."""
         kind = BD.family(obj.Series)
         linear = kind == "linear"
         if hasattr(obj, "Closure"):
-            # LM bushings are always UU; angular contact and thrust bearings come open
+            # LM bushings are always UU; most other families come open only
             obj.setEditorMode("Closure", 2 if kind in BD.NO_CLOSURES else 0)
         if hasattr(obj, "Flanged"):
-            obj.setEditorMode("Flanged", 2 if kind in ("angular", "thrust") else 0)
+            obj.setEditorMode("Flanged", 0 if kind in ("deepgroove", "linear") else 2)
+        if hasattr(obj, "Variant"):
+            obj.setEditorMode("Variant", 0 if kind in BD.VARIANTS else 2)
         if hasattr(obj, "FlangeShape"):
             obj.setEditorMode("FlangeShape", 0 if linear else 2)
         if hasattr(obj, "PitchDiameter"):
@@ -175,12 +199,15 @@ class BearingObject:
             names = self._designation_list(obj.Series)
             obj.Designation = names
             obj.Designation = current if current in names else BD.AUTO
+            self._set_variants(obj)
             self._update_editor_modes(obj)
 
     def onDocumentRestored(self, obj):
-        # documents saved before linear bushings existed have no FlangeShape
+        # documents from before linear bushings / v0.4 have no FlangeShape / Variant
         if not hasattr(obj, "FlangeShape"):
             self._add_flange_shape(obj)
+        if not hasattr(obj, "Variant"):
+            self._add_variant(obj)
         self._update_editor_modes(obj)
 
     def _attached_frame(self, obj):
@@ -218,17 +245,18 @@ class BearingObject:
             )
 
         flange_shape = getattr(obj, "FlangeShape", "Round")
-        shape, colors = BG.build(row, obj.Closure, flanged, obj.DetailLevel, flange_shape)
+        variant = getattr(obj, "Variant", None)
+        shape, colors = BG.build(row, obj.Closure, flanged, obj.DetailLevel, flange_shape, variant)
         self.face_colors = colors
 
         ins = BG.internals(row)
         obj.BoreDiameter = row.d
         obj.OuterDiameter = row.D
-        obj.Width = row.width(obj.Closure)
+        obj.Width = row.width(obj.Closure) + (2 * BD.AS_WASHER if variant == "AXK + 2 AS" else 0.0)
         obj.PitchDiameter = ins.dm
         obj.BallDiameter = ins.Dw
         obj.BallCount = ins.Z
-        obj.FullDesignation = BD.full_designation(row, obj.Closure, flanged, flange_shape)
+        obj.FullDesignation = BD.full_designation(row, obj.Closure, flanged, flange_shape, variant)
         self._update_label(obj)
 
         placement = obj.Placement

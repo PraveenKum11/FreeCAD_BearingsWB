@@ -28,12 +28,65 @@ SERIES = {
     "R": ("Inch miniature ball bearing, R", "inch_r.csv", "R188", "deepgroove"),
     "72": ("Angular contact ball bearing, series 72 B", "iso15_62.csv", "7204", "angular"),
     "73": ("Angular contact ball bearing, series 73 B", "iso15_63.csv", "7304", "angular"),
+    "12": ("Self-aligning ball bearing, series 12", "iso15_62.csv", "1204", "selfaligning"),
+    "13": ("Self-aligning ball bearing, series 13", "iso15_63.csv", "1304", "selfaligning"),
+    "22": ("Self-aligning ball bearing, series 22", "iso15_22.csv", "2204", "selfaligning"),
+    "23": ("Self-aligning ball bearing, series 23", "iso15_23.csv", "2304", "selfaligning"),
+    "NU2": ("Cylindrical roller bearing, series NU2 / NJ2", "iso15_62.csv", "NU204", "cylindrical"),
+    "NU3": ("Cylindrical roller bearing, series NU3 / NJ3", "iso15_63.csv", "NU304", "cylindrical"),
+    "NU22": (
+        "Cylindrical roller bearing, series NU22 / NJ22",
+        "iso15_22.csv",
+        "NU2204",
+        "cylindrical",
+    ),
+    "NU23": (
+        "Cylindrical roller bearing, series NU23 / NJ23",
+        "iso15_23.csv",
+        "NU2304",
+        "cylindrical",
+    ),
+    "302": ("Tapered roller bearing, series 302", "tapered.csv", "30204", "tapered"),
+    "303": ("Tapered roller bearing, series 303", "tapered.csv", "30304", "tapered"),
+    "320": ("Tapered roller bearing, series 320", "tapered.csv", "32004", "tapered"),
     "511": ("Thrust ball bearing, series 511", "thrust_511.csv", "51104", "thrust"),
+    "AXK": ("Axial needle roller and cage assembly, AXK", "axk.csv", "AXK1528", "axk"),
+    "HK": ("Drawn cup needle roller bearing, HK", "needle.csv", "HK0810", "needle"),
+    "NK": ("Needle roller bearing, NK", "needle.csv", "NK10/16", "needle"),
     "LM": ("Linear ball bushing, LM", "linear_lm.csv", "LM8UU", "linear"),
 }
 
+# Series whose rows come from another series' table (ISO 15 shares boundary dimensions
+# between them): series -> (prefix of the source rows, new prefix, smallest bore in mm).
+# The smallest sizes of some source tables aren't made in the derived types.
+DERIVED = {
+    "72": ("62", "72", 10),
+    "73": ("63", "73", 10),
+    "12": ("62", "12", 10),
+    "13": ("63", "13", 12),
+    "23": ("23", "23", 12),
+    "NU2": ("62", "NU2", 15),
+    "NU3": ("63", "NU3", 17),
+    "NU22": ("22", "NU22", 17),
+    "NU23": ("23", "NU23", 20),
+}
+
 # families without shields or seals (their Closure property is hidden)
-NO_CLOSURES = ("angular", "thrust", "linear")
+NO_CLOSURES = (
+    "angular",
+    "thrust",
+    "linear",
+    "selfaligning",
+    "cylindrical",
+    "tapered",
+    "needle",
+    "axk",
+)
+
+# Family-specific variants (the Variant property): inner ring ribs of a cylindrical roller
+# bearing, and thrust washers for an AXK assembly.
+VARIANTS = {"cylindrical": ["NU", "NJ"], "axk": ["AXK", "AXK + 2 AS"]}
+AS_WASHER = 1.0  # thickness of an AS thrust washer, mm
 
 FLANGE_SHAPES = ["Round", "Square"]  # linear bushings: LMF / LMK
 
@@ -86,6 +139,48 @@ class ThrustRow(BearingRow):
         return self.B
 
 
+class SelfAligningRow(BearingRow):
+    """Self-aligning ball bearing: two rows of balls, spherical outer raceway."""
+
+    kind = "selfaligning"
+
+
+class CylindricalRow(BearingRow):
+    """Cylindrical roller bearing NU (ribs on the outer ring) or NJ (plus one inner rib)."""
+
+    kind = "cylindrical"
+
+
+class TaperedRow(BearingRow):
+    """Tapered roller bearing: B is the total width T; cone_B and cup_C the ring widths."""
+
+    kind = "tapered"
+
+    def __init__(self, name, d, D, T, r, cone_B, cup_C):
+        BearingRow.__init__(self, name, d, D, T, r)
+        self.cone_B, self.cup_C = cone_B, cup_C
+
+    def width(self, closure=None):
+        return self.B
+
+
+class NeedleRow(BearingRow):
+    """Needle roller bearing without inner ring: d is the shaft (Fw), B the width C.
+    HK = drawn cup (thin shell), NK = machined ring."""
+
+    kind = "needle"
+
+    @property
+    def drawn(self):
+        return self.name.startswith("HK")
+
+
+class AxialNeedleRow(BearingRow):
+    """AXK axial needle roller and cage assembly: B is the needle diameter (its height)."""
+
+    kind = "axk"
+
+
 class LinearRow:
     """A linear ball bushing: shaft d, outside diameter D, length B (L in catalogues).
 
@@ -116,6 +211,17 @@ class LinearRow:
         return "LinearRow(%s %gx%gx%g)" % (self.name, self.d, self.D, self.B)
 
 
+def kind(row):
+    """The family of a row: deepgroove, angular, thrust, linear, selfaligning, ..."""
+    if getattr(row, "is_linear", False):
+        return "linear"
+    if getattr(row, "is_angular", False):
+        return "angular"
+    if getattr(row, "is_thrust", False):
+        return "thrust"
+    return getattr(row, "kind", "deepgroove")
+
+
 def family(series):
     return SERIES[series][3]
 
@@ -138,6 +244,11 @@ def _read_csv(fname):
     reader = csv.reader(lines)
     header = next(reader)
     return [dict(zip(header, rec)) for rec in reader]
+
+
+def _bearing_args(rec):
+    r = _bearing_row(rec)
+    return r.name, r.d, r.D, r.B, r.r
 
 
 def _bearing_row(rec):
@@ -169,16 +280,42 @@ def _linear_row(rec):
     )
 
 
-def _angular_rows(series, records):
-    """72xx / 73xx from the 62 / 63 table: the four-digit sizes, renamed."""
-    base = "6" + series[1:]
+_ROW_CLASS = {
+    "angular": AngularRow,
+    "selfaligning": SelfAligningRow,
+    "cylindrical": CylindricalRow,
+}
+
+
+def _derived_rows(series, records):
+    """Rows of a derived series (DERIVED): the four-digit source sizes, renamed."""
+    source, prefix, min_bore = DERIVED[series]
+    cls = _ROW_CLASS[family(series)]
     rows = []
     for rec in records:
         name = rec["Designation"].strip()
-        if len(name) == 4 and name.startswith(base):
+        if len(name) == 4 and name.startswith(source):
             r = _bearing_row(rec)
-            rows.append(AngularRow(series + name[2:], r.d, r.D, r.B, r.r))
+            if r.d >= min_bore:
+                rows.append(cls(prefix + name[2:], r.d, r.D, r.B, r.r))
     return rows
+
+
+def _tapered_row(rec):
+    n = {k: _num(v) for k, v in rec.items() if k != "Designation"}
+    return TaperedRow(rec["Designation"].strip(), n["d"], n["D"], n["T"], n["r"], n["B"], n["C"])
+
+
+def _needle_row(rec):
+    return NeedleRow(
+        rec["Designation"].strip(), _num(rec["d"]), _num(rec["D"]), _num(rec["C"]), 0.0
+    )
+
+
+def _axk_row(rec):
+    return AxialNeedleRow(
+        rec["Designation"].strip(), _num(rec["d"]), _num(rec["D"]), _num(rec["Dw"]), 0.0
+    )
 
 
 def _thrust_row(rec):
@@ -187,16 +324,33 @@ def _thrust_row(rec):
     )
 
 
+def _prefix_of(name, series_keys):
+    """The longest series key `name` starts with (UCFL204 is UCFL, not UCF)."""
+    keys = [k for k in series_keys if name.startswith(k)]
+    return max(keys, key=len) if keys else None
+
+
 def load_table(series):
     """Return the rows of a series key, sorted by bore (then OD and width)."""
     if series in _tables:
         return _tables[series]
     records = _read_csv(os.path.join(dataPath, SERIES[series][1]))
-    kind = family(series)
-    if kind == "angular":
-        rows = _angular_rows(series, records)
+    fam = family(series)
+    if series in DERIVED:
+        rows = _derived_rows(series, records)
+    elif fam == "selfaligning":  # series 22: the whole table
+        rows = [SelfAligningRow(*_bearing_args(rec)) for rec in records]
     else:
-        make = {"linear": _linear_row, "thrust": _thrust_row}.get(kind, _bearing_row)
+        shared = [k for k, v in SERIES.items() if v[1] == SERIES[series][1]]
+        if len(shared) > 1:  # one table for several series: rows by designation prefix
+            records = [r for r in records if _prefix_of(r["Designation"], shared) == series]
+        make = {
+            "linear": _linear_row,
+            "thrust": _thrust_row,
+            "tapered": _tapered_row,
+            "needle": _needle_row,
+            "axk": _axk_row,
+        }.get(fam, _bearing_row)
         rows = [make(rec) for rec in records]
     rows.sort(key=lambda r: (r.d, r.D, r.B))
     _tables[series] = rows
@@ -214,16 +368,20 @@ def get_row(series, name):
     return None
 
 
-def full_designation(row, closure, flanged, flange_shape="Round"):
-    """608ZZ, F688-2RS, MF105ZZ, FR188ZZ; 7204B; 51104; linear: LM8UU, LMF8UU, LMK8LUU."""
+def full_designation(row, closure, flanged, flange_shape="Round", variant=None):
+    """608ZZ, F688-2RS, MF105ZZ, FR188ZZ; 7204B; 51104; NU204 / NJ204; linear: LM8UU,
+    LMF8UU, LMK8LUU. Families without closures get no closure code."""
     name = row.name
-    if getattr(row, "is_angular", False):
+    k = kind(row)
+    if k == "cylindrical" and variant == "NJ":
+        return "NJ" + name[2:]
+    if k == "angular":
         return name + "B"
-    if getattr(row, "is_thrust", False):
-        return name
-    if is_linear(row):
+    if k == "linear":
         if flanged and row.has_flange:
             name = "LM" + ("K" if flange_shape == "Square" else "F") + name[2:]
+        return name
+    if k in NO_CLOSURES:
         return name
     if flanged and row.has_flange:
         name = "MF" + name[2:] if name.startswith("MR") else "F" + name
@@ -256,6 +414,7 @@ _CLOSURE_CODES = {"2RS": "2RS", "RS": "RS", "2Z": "ZZ", "ZZ": "ZZ", "Z": "Z"}
 _SKF_MINI_RE = re.compile(r"^6(1[89])/(\d)$")  # SKF 618/8 = 688, 619/5 = 695
 _LINEAR_FLANGE_RE = re.compile(r"^LM([FK])(\d.*)$")  # LMF8UU, LMK8LUU
 _ANGULAR_RE = re.compile(r"^(7[23]\d\d)(?:B|AC|C)[A-Z0-9/]*$")  # 7204B, 7204 BEP, 7305 BECBP
+_TAPERED_RE = re.compile(r"^(3[02][023]\d\d)[A-Z][A-Z0-9/]*$")  # 30204 J2/Q, 32005 X
 
 
 def parse_designation(text):
@@ -267,9 +426,15 @@ def parse_designation(text):
     "LMF8LUU" -> ("LM8LUU", None, "Round"); `flanged` is then the flange shape.
     """
     t = text.strip().upper().replace(" ", "")
-    m = _ANGULAR_RE.match(t)
+    m = _ANGULAR_RE.match(t) or _TAPERED_RE.match(t)
     if m:
         return m.group(1), None, False
+    # NJ204 is an NU204 variant; SKF suffixes (NU2205 ECP) are dropped
+    m = re.match(r"^N[UJ](\d+)(?:[A-Z][A-Z0-9/]*)?$", t)
+    if m:
+        return "NU" + m.group(1), None, False
+    if t.startswith(("NU", "HK", "NK", "AXK")):
+        return t, None, False
     m = _LINEAR_FLANGE_RE.match(t)
     if m:
         return "LM" + m.group(2), None, "Square" if m.group(1) == "K" else "Round"

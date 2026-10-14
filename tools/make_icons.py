@@ -5,7 +5,8 @@ import math
 import os
 
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Icons")
-SERIES = ["60", "62", "63", "68", "69", "MR", "R", "72", "73"]
+SERIES = ["60", "62", "63", "68", "69", "MR", "R", "72", "73", "12", "13", "22", "23"]
+SERIES += ["NU2", "NU3", "NU22", "NU23", "302", "303", "320", "HK", "NK"]
 
 
 def bearing_svg(label=None, balls=8, badge="#1f6feb"):
@@ -144,10 +145,12 @@ if __name__ == "__main__":
         f.write(linear_svg())
     with open(os.path.join(OUT, "Bearing_511.svg"), "w") as f:
         f.write(thrust_svg())
+    with open(os.path.join(OUT, "Bearing_AXK.svg"), "w") as f:
+        f.write(thrust_svg("AXK"))
     with open(os.path.join(OUT, "PrintableBearing.svg"), "w") as f:
         f.write(bearing_svg("3D", balls=10, badge="#e8710a"))
     with open(os.path.join(OUT, "BearingBOM.svg"), "w") as f:
         f.write(bom_svg())
     with open(os.path.join(OUT, "BearingSearch.svg"), "w") as f:
         f.write(search_svg())
-    print("wrote", len(SERIES) + 6, "icons to", OUT)
+    print("wrote", len(SERIES) + 7, "icons to", OUT)

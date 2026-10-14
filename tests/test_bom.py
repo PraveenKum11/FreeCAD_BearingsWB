@@ -28,6 +28,7 @@ class BOM(DocumentTest):
         array = doc.addObject("App::Link", "Array")
         array.LinkedObject = doc.getObject("Bearing")  # the first 608
         array.ElementCount = 4
+        BearingBase.make_bearing("AXK", "AXK1528", doc=doc, Variant="AXK + 2 AS")
         PB.create_races(doc, FreeCAD.Placement(), P608, False, True, False)
         doc.recompute()
 
@@ -63,3 +64,8 @@ class BOM(DocumentTest):
             rows = list(csv.DictReader(f))
         self.assertEqual(list(rows[0]), BearingBOM.COLUMNS)
         self.assertEqual(len(rows), len(items))
+
+    def test_axk_washers(self):
+        items = self.by_item()
+        self.assertEqual(items["AXK1528"]["Quantity"], 1)
+        self.assertEqual(items["AS1528"]["Quantity"], 2, "an AS washer on each side")

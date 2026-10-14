@@ -21,9 +21,21 @@ class Internals(unittest.TestCase):
         self.assertTrue(close(i.Dw, 8.0), i.Dw)
 
 
-def expected_solids(row, closure, detail):
+# families whose Detailed level adds a cage (the others: Detailed is Standard)
+WITH_CAGE = ("deepgroove", "angular", "thrust")
+
+
+def expected_solids(row, closure, detail, variant=None):
     if detail == "Envelope":
         return 1
+    kind = BD.kind(row)
+    z = BG.internals(row).Z if kind not in ("deepgroove", "angular") else 0
+    if kind in ("selfaligning", "cylindrical", "tapered"):
+        return 2 + z  # inner and outer ring, rolling elements
+    if kind == "needle":
+        return 1 + z  # the cup / ring and the needles
+    if kind == "axk":
+        return 1 + z + (2 if variant == "AXK + 2 AS" else 0)  # cage, needles, washers
     if BD.is_linear(row):
         # sleeve, two seals, retainer; Detailed adds the balls
         return 4 + (BG.internals(row).Z if detail == "Detailed" else 0)
@@ -40,13 +52,13 @@ class AllShapes(unittest.TestCase):
     of each series, to keep the suite fast.
     """
 
-    def check_shape(self, row, closure, flanged, detail, flange_shape="Round"):
-        shape, colors = BG.build(row, closure, flanged, detail, flange_shape)
+    def check_shape(self, row, closure, flanged, detail, flange_shape="Round", variant=None):
+        shape, colors = BG.build(row, closure, flanged, detail, flange_shape, variant)
         self.assertTrue(shape.isValid(), "invalid shape")
         self.assertEqual(len(colors), len(shape.Faces), "color count")
         bb = tight_bb(shape)
         od = (row.K if flange_shape == "Square" else row.D1) if flanged else row.D
-        B = row.width(closure)
+        B = row.width(closure) + (2 * BD.AS_WASHER if variant == "AXK + 2 AS" else 0)
         self.assertTrue(
             close(bb.XLength, od, 0.01) and close(bb.YLength, od, 0.01),
             "diameter %.3f != %.3f" % (bb.XLength, od),
@@ -66,8 +78,8 @@ class AllShapes(unittest.TestCase):
         self.assertTrue(
             shape.isInside(V(row.D / 2 * 0.99, 0, z_out), 1e-7, True), "outer ring missing"
         )
-        n = expected_solids(row, closure, detail)
-        if detail == "Detailed" and not BD.is_linear(row):
+        n = expected_solids(row, closure, detail, variant)
+        if detail == "Detailed" and BD.kind(row) in WITH_CAGE:
             self.assertGreaterEqual(len(shape.Solids), n + 1, "solids (with cage)")
         else:
             self.assertEqual(len(shape.Solids), n, "solids")
@@ -81,10 +93,11 @@ class AllShapes(unittest.TestCase):
                 ("Open",) if BD.family(series) in BD.NO_CLOSURES else ("Open", "ZZ", "2RS", "Z")
             )
             for row in rows:
-                variants = [(False, "Round")]
+                variants = [(False, "Round", v) for v in BD.VARIANTS.get(BD.family(series), [None])]
                 if row.has_flange:
-                    variants += [(True, s) for s in (BD.FLANGE_SHAPES if linear else ["Round"])]
-                for flanged, shape in variants:
+                    shapes = BD.FLANGE_SHAPES if linear else ["Round"]
+                    variants += [(True, s, None) for s in shapes]
+                for flanged, shape, variant in variants:
                     for closure in closures:
                         for detail in BG.DETAIL_LEVELS:
                             if detail == "Detailed" and row.name not in sample:
@@ -95,9 +108,10 @@ class AllShapes(unittest.TestCase):
                                 closure=closure,
                                 flanged=flanged,
                                 shape=shape,
+                                variant=variant,
                                 detail=detail,
                             ):
-                                self.check_shape(row, closure, flanged, detail, shape)
+                                self.check_shape(row, closure, flanged, detail, shape, variant)
 
     def test_no_overlap(self):
         for series, name in (
@@ -107,6 +121,15 @@ class AllShapes(unittest.TestCase):
             ("72", "7204"),
             ("511", "51104"),
             ("511", "51120"),
+            ("12", "1205"),
+            ("23", "2310"),
+            ("NU2", "NU204"),
+            ("302", "30204"),
+            ("303", "30320"),
+            ("320", "32010"),
+            ("HK", "HK0810"),
+            ("NK", "NK20/16"),
+            ("AXK", "AXK1528"),
             ("60", "608"),
             ("62", "6204"),
             ("68", "688"),

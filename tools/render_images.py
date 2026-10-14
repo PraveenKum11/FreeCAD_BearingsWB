@@ -98,20 +98,24 @@ def quarter(center=None, size=200):
 
 
 def standard_parts(
-    series, name, closure="Open", flanged=False, detail="Standard", pl=None, shape="Round"
+    series,
+    name,
+    closure="Open",
+    flanged=False,
+    detail="Standard",
+    pl=None,
+    shape="Round",
+    variant=None,
 ):
-    """[(solid, rgb)] of a standard bearing or linear bushing, as the workbench colors it."""
+    """[(solid, rgb)] of any standard bearing or bushing, as the workbench colors it."""
     row = BD.get_row(series, name)
     out = []
     flanged = flanged and row.has_flange
-    if BD.is_linear(row):
-        made = BG.make_linear(row, flanged, shape, detail)
-    elif getattr(row, "is_thrust", False):
-        made = BG.make_thrust(row, detail)
-    else:
-        made = BG.make_deep_groove(
-            row, closure, flanged, detail, angular=getattr(row, "is_angular", False)
-        )
+    shape_, colors = BG.build(row, closure, flanged, detail, shape, variant)
+    solids, made, i = shape_.Solids if shape_.ShapeType == "Compound" else [shape_], [], 0
+    for solid in solids:  # face colors -> one color per solid
+        made.append((solid, colors[i]))
+        i += len(solid.Faces)
     for solid, rgb in made:
         s = solid.copy()
         if pl is not None:
@@ -561,6 +565,103 @@ def angular_thrust():
     row_with_captions(img, proj, captions, "angular-thrust.png", 1800, font_size=34)
 
 
+def more_types():
+    """The v0.4 types, cut away, in two rows: self-aligning, cylindrical NU / NJ, tapered,
+    needle, AXK."""
+    rows = [
+        [
+            ("22", "2205", None, "2205 (self-aligning)"),
+            ("NU22", "NU2205", "NU", "NU2205 (cylindrical)"),
+            ("NU22", "NU2205", "NJ", "NJ2205 (inner rib)"),
+        ],
+        [
+            ("302", "30205", None, "30205 (tapered)"),
+            ("HK", "HK2520", None, "HK2520 (needle)"),
+            ("AXK", "AXK2542", "AXK", "AXK2542 (thrust needle)"),
+        ],
+    ]
+    images = []
+    for cases in rows:
+        items, captions, x = [], [], 0.0
+        for series, name, variant, caption in cases:
+            row = BD.get_row(series, name)
+            x += max(row.D, 46) / 2  # same spacing for small and large parts
+            pl = App.Placement(V(x, 0, 0), App.Rotation())
+            parts = standard_parts(series, name, pl=pl, variant=variant)
+            items += cut_all(parts, quarter(V(x, 0, 0)))
+            captions.append((caption, (x, 0, 0)))
+            x += max(row.D, 46) / 2 + 22
+        img, proj, _ = render(items, direction=(0, 1, -0.2), scale=3, outlines=False)
+        row_with_captions(img, proj, captions, "more-types.png", 1600, font_size=34)
+        images.append(Image.open(os.path.join(OUT, "more-types.png")).copy())  # load it now
+    out = Image.new("RGB", (1600, sum(i.height for i in images) + 30), "white")
+    out.paste(images[0], (0, 0))
+    out.paste(images[1], (0, images[0].height + 30))
+    save(out, "more-types.png")
+
+
+def gui_shots():
+    """Wiki screenshots: the toolbars and a bearing's properties."""
+    clear(scene)
+    b = BearingBase.make_bearing("60", "608", doc=scene, Closure="2RS")
+    scene.recompute()
+    Gui.Selection.clearSelection()
+    Gui.Selection.addSelection(b)
+    for _ in range(20):
+        QtGui.QApplication.processEvents()
+    mw = Gui.getMainWindow()
+    bars = {t.windowTitle(): t for t in mw.findChildren(QtGui.QToolBar)}
+    shots = [grab(bars[t]) for t in ("Bearings", "Bearing tools") if t in bars]
+    if shots:
+        W = sum(i.width for i in shots) + 40 * (len(shots) - 1)
+        out = Image.new("RGB", (W, max(i.height for i in shots)), (40, 44, 52))
+        x = 0
+        for im in shots:
+            out.paste(im, (x, 0))
+            x += im.width + 40
+        save(out, "wiki-toolbars.png")
+    # the property editor (inside the combo view in FreeCAD 1.1): find it by class
+    editors = [
+        w
+        for w in mw.findChildren(QtGui.QTreeView)
+        if "PropertyEditor" in w.metaObject().className()
+    ]
+    editors = [w for w in editors if w.isVisible()] or editors
+    if editors:
+        tree = editors[0]
+        tree.expandAll()
+        tree.resize(560, 900)
+        for _ in range(10):
+            QtGui.QApplication.processEvents()
+        path = WORK + "/props.png"
+        tree.grab().save(path)
+        img = Image.open(path).convert("RGB")
+        # crop the empty space below the last row (the background is the corner's color)
+        bg = Image.new("RGB", img.size, img.getpixel((img.width - 1, img.height - 1)))
+        box = ImageChops.difference(img, bg).getbbox()
+        if box:
+            img = img.crop((0, 0, img.width, min(img.height, box[3] + 16)))
+        save(img, "wiki-properties.png")
+    else:
+        say("no property editor found")
+    Gui.Selection.clearSelection()
+
+
+def toolbar_shot():
+    """Dev check: the Bearings toolbar (not used in the README)."""
+    bars = [
+        t
+        for t in Gui.getMainWindow().findChildren(QtGui.QToolBar)
+        if t.windowTitle() in ("Bearings", "Bearing tools")
+    ]
+    for b in bars:
+        grab(b).save(os.path.join(WORK, "toolbar_%s.png" % b.windowTitle().replace(" ", "_")))
+        say(
+            "toolbar saved",
+            os.path.join(WORK, "toolbar_%s.png" % b.windowTitle().replace(" ", "_")),
+        )
+
+
 def bom_panel():
     """The BOM panel listing a small machine's bearings."""
     import BearingBOMGui
@@ -776,7 +877,9 @@ STEPS = (
     printable_panel,
     find_panel,
     angular_thrust,
+    more_types,
     bom_panel,
+    gui_shots,
     turntable_gif,
     workflow_gif,
 )

@@ -3,5 +3,8 @@ __pycache__/
 *.FCBak
 .DS_Store
 
-# dev-only tools and their caches (SKF scraper)
+# dev-only tools and their caches
 tools/dev/
+
+# temporary ignore
+/.github/workflows/wiki.yml
