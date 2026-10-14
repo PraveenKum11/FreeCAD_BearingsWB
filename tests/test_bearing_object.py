@@ -104,14 +104,36 @@ class Labels(DocumentTest):
         self.doc.recompute()
         self.assertEqual(obj.Label, "608")
 
+    def test_same_designation_gets_a_counter(self):
+        """A second 608 is 608_001, not 609 (FreeCAD increments a trailing number)."""
+        labels = [BearingBase.make_bearing("60", "608", doc=self.doc).Label for _ in range(3)]
+        self.assertEqual(labels, ["608", "608_001", "608_002"])
+
     def test_duplicate_designation_keeps_following(self):
         BearingBase.make_bearing("60", "608", doc=self.doc)
-        twin = BearingBase.make_bearing(
-            "60", "608", doc=self.doc
-        )  # FreeCAD may make the label unique
+        twin = BearingBase.make_bearing("60", "608", doc=self.doc)
         twin.Designation = "609"
         self.doc.recompute()
         self.assertEqual(twin.Label, "609")
+        twin.Closure = "ZZ"
+        self.doc.recompute()
+        self.assertEqual(twin.Label, "609ZZ")
+
+    def test_old_auto_label_gets_a_counter(self):
+        """Auto labels from before the counter ("609" for a second 608) are repaired."""
+        BearingBase.make_bearing("60", "608", doc=self.doc)
+        b = BearingBase.make_bearing("60", "608", doc=self.doc)
+        b.Label = "609"
+        b.Proxy.auto_label, b.Proxy.auto_target = "609", "608"
+        b.touch()
+        self.doc.recompute()
+        self.assertEqual(b.Label, "608_001")
+
+    def test_freed_label_is_reused(self):
+        first = BearingBase.make_bearing("60", "608", doc=self.doc)
+        BearingBase.make_bearing("60", "608", doc=self.doc)
+        self.doc.removeObject(first.Name)
+        self.assertEqual(BearingBase.make_bearing("60", "608", doc=self.doc).Label, "608")
 
     def test_user_rename_sticks(self):
         obj = BearingBase.make_bearing("60", "608", doc=self.doc)

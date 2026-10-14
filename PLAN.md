@@ -172,6 +172,12 @@ planar face adjacent to the edge (`ancestorsOfType`), with a fallback to the cir
 Designation strings, using maker conventions: `608`, `608Z`, `608ZZ`, `608-RS`, `608-2RS`,
 `F608ZZ`, `MF105ZZ`.
 
+Labels follow the designation (`608`, then `608-2RS` after a closure change) until the
+user renames the object. Further bearings with the same designation get a counter:
+`608_001`, `608_002`. Labels must be unique, and FreeCAD otherwise makes them so by
+incrementing a trailing number: a second `608` became `609`, which reads as a different
+bearing (fixed 2026-10-14).
+
 Face colors (steel rings and balls, brass cage, grey shields, black seals) are computed in
 `execute` and applied by the view provider (`DiffuseColor`).
 

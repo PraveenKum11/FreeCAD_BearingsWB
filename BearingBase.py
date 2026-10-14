@@ -40,6 +40,17 @@ def match_kind(series, frame):
     return BD.best_match_kind(series, frame[2])
 
 
+def free_label(obj, base):
+    """`base` if no other object in the document has that label, else the first free
+    "base_001", "base_002", ..."""
+    taken = {o.Label for o in obj.Document.Objects if o is not obj}
+    label, n = base, 0
+    while label in taken:
+        n += 1
+        label = "%s_%03d" % (base, n)
+    return label
+
+
 class BearingObject:
     def __init__(self, obj, series="60", attach_to=None):
         obj.Proxy = self
@@ -198,9 +209,13 @@ class BearingObject:
     def _update_label(self, obj):
         """Keep the label equal to the designation until the user renames the object.
 
+        The first 608 is "608", further ones "608_001", "608_002", ... Labels must be
+        unique, and left to itself FreeCAD makes them so by incrementing a trailing number:
+        a second "608" would become "609", which reads as another bearing.
+
         auto_label is the label we (or FreeCAD, at creation) last assigned, which may differ
-        from both Name and the designation (e.g. "Bearing002" after a delete, or "608001"
-        when FreeCAD makes labels unique). auto_target is the designation it was made from.
+        from Name (e.g. "Bearing002" after a delete). auto_target is the designation it was
+        made from.
         """
         target = obj.FullDesignation
         auto = getattr(self, "auto_label", None)
@@ -208,8 +223,10 @@ class BearingObject:
         # labels left stuck by v0.1's original Label == Name check
         if obj.Label not in (obj.Name, auto) and not re.fullmatch(r"Bearing\d*", obj.Label):
             return  # renamed by the user
-        if getattr(self, "auto_target", None) != target or obj.Label != auto:
-            obj.Label = target
+        # also relabels auto labels from before the counter ("609" for a second 608)
+        current = re.fullmatch(re.escape(target) + r"(_\d{3,})?", obj.Label)
+        if getattr(self, "auto_target", None) != target or obj.Label != auto or not current:
+            obj.Label = free_label(obj, target)
             self.auto_label = obj.Label
             self.auto_target = target
 
