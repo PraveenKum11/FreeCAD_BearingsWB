@@ -26,6 +26,12 @@ class Tables(unittest.TestCase):
                     if r.B_shielded is not None:
                         self.assertGreaterEqual(r.B_shielded, r.B, "shielded width < open width")
 
+    def test_auto_match_needs_a_standard_size(self):
+        self.assertEqual(BD.auto_match("60", 8.0, "Shaft").name, "608")
+        self.assertEqual(BD.auto_match("60", 22.004, "Housing").name, "608")
+        self.assertIsNone(BD.auto_match("60", 13.0, "Shaft"), "no 60xx has a 13 mm bore")
+        self.assertIn("6001 (12 mm), 6002 (15 mm)", BD.no_fit_message("60", 13.0, "Shaft"))
+
     def test_linear_dimensions(self):
         for r in BD.load_table("LM"):
             with self.subTest(row=r.name):

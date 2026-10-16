@@ -45,3 +45,8 @@ See [[Attach it to a hole or a shaft|Getting started#attach-it-to-a-hole-or-a-sh
 `MatchTo` decides whether an `Auto` designation matches the edge to the bore (Shaft) or
 the outside (Housing); it is set from the geometry when you attach (a hole is Housing, a
 shaft end Shaft).
+
+`Auto` only uses a size whose bore (or outside diameter) equals the edge's diameter. If the
+series has no such size, no bearing is added and a message names the nearest sizes; pick
+one in `Designation` to attach it anyway. If the edge later changes to a size the series
+does not have, the bearing shows an error on recompute.

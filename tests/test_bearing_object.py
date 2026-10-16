@@ -58,6 +58,31 @@ class ShaftAttach(DocumentTest):
         bb = tight_bb(s.Shape)
         self.assertTrue(close(bb.ZMax, 30, 0.01) and close(bb.ZMin, 23, 0.01), (bb.ZMin, bb.ZMax))
 
+    def test_no_standard_size(self):
+        """A 13 mm shaft: no 60xx fits, so no bearing is added."""
+        shaft = self.doc.addObject("Part::Feature", "Shaft")
+        shaft.Shape = Part.makeCylinder(6.5, 30)
+        self.doc.recompute()
+        target = (shaft, [find_circle(shaft, 6.5, 30)])
+        with self.assertRaises(ValueError):
+            BearingBase.make_bearing("60", attach_to=target, doc=self.doc)
+        self.assertEqual(len(self.doc.Objects), 1, "bearing added anyway")
+        # an explicit size still attaches
+        b = BearingBase.make_bearing("60", "6001", attach_to=target, doc=self.doc)
+        self.assertEqual(b.FullDesignation, "6001")
+
+    def test_edge_resized_to_no_standard_size(self):
+        shaft = self.doc.addObject("Part::Feature", "Shaft")
+        shaft.Shape = Part.makeCylinder(4, 30)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "60", attach_to=(shaft, [find_circle(shaft, 4, 30)]), doc=self.doc
+        )
+        shaft.Shape = Part.makeCylinder(6.5, 30)
+        b.touch()
+        self.doc.recompute()
+        self.assertTrue(is_invalid(b), "Auto bearing on a 13 mm shaft should fail")
+
 
 class Flanged(DocumentTest):
     def test_flanged_series_change(self):

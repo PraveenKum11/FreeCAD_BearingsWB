@@ -388,11 +388,34 @@ def full_designation(row, closure, flanged, flange_shape="Round", variant=None):
     return name + CLOSURE_SUFFIX.get(closure, "")
 
 
+FIT_TOLERANCE = 0.01  # mm: an edge this close to a bore / OD fits it
+
+
+def _fit_key(match_to):
+    return (lambda r: r.d) if match_to == "Shaft" else (lambda r: r.D)
+
+
 def auto_match(series, diameter, match_to):
-    """Pick the row whose bore (match_to='Shaft') or OD ('Housing') is closest to diameter."""
-    key = (lambda r: r.d) if match_to == "Shaft" else (lambda r: r.D)
+    """The row whose bore (match_to='Shaft') or OD ('Housing') equals diameter (the
+    narrowest if several do), or None if the series has no such size."""
+    key = _fit_key(match_to)
+    fits = [r for r in load_table(series) if abs(key(r) - diameter) <= FIT_TOLERANCE]
+    return min(fits, key=lambda r: r.B) if fits else None
+
+
+def no_fit_message(series, diameter, match_to):
+    """Why auto_match found nothing, naming the nearest sizes below and above."""
+    key = _fit_key(match_to)
     rows = load_table(series)
-    return min(rows, key=lambda r: (abs(key(r) - diameter), r.B))
+    below = max((r for r in rows if key(r) < diameter), key=key, default=None)
+    above = min((r for r in rows if key(r) > diameter), key=key, default=None)
+    nearest = ", ".join("{} ({:g} mm)".format(r.name, key(r)) for r in (below, above) if r)
+    return "{}: no size with {} of {:g} mm (nearest: {})".format(
+        SERIES[series][0],
+        "a bore" if match_to == "Shaft" else "an outside diameter",
+        round(diameter, 3),
+        nearest,
+    )
 
 
 def best_match_kind(series, diameter):

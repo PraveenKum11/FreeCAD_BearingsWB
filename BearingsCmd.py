@@ -33,16 +33,31 @@ class InsertBearingCommand:
         doc = FreeCAD.ActiveDocument
         doc.openTransaction("Add bearing")
         edges = [(obj, [sub]) for obj, sub in BRselection.selected_edges()]
-        created = []
+        created, skipped = [], []
         if edges:
             for target in edges:
-                created.append(BearingBase.make_bearing(self.series, attach_to=target, doc=doc))
+                try:
+                    created.append(BearingBase.make_bearing(self.series, attach_to=target, doc=doc))
+                except ValueError as e:
+                    skipped.append("{}.{}: {}".format(target[0].Label, target[1][0], e))
         else:
             created.append(BearingBase.make_bearing(self.series, doc=doc))
-        doc.commitTransaction()
-        FreeCADGui.Selection.clearSelection()
-        for obj in created:
-            FreeCADGui.Selection.addSelection(obj)
+        if created:
+            doc.commitTransaction()
+        else:
+            doc.abortTransaction()
+        if skipped:
+            from PySide import QtWidgets
+
+            QtWidgets.QMessageBox.warning(
+                FreeCADGui.getMainWindow(),
+                "No standard bearing",
+                "No bearing added for:\n\n" + "\n".join(skipped),
+            )
+        if created:
+            FreeCADGui.Selection.clearSelection()
+            for obj in created:
+                FreeCADGui.Selection.addSelection(obj)
 
 
 class GroupCommand:
