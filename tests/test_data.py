@@ -30,7 +30,14 @@ class Tables(unittest.TestCase):
         self.assertEqual(BD.auto_match("60", 8.0, "Shaft").name, "608")
         self.assertEqual(BD.auto_match("60", 22.004, "Housing").name, "608")
         self.assertIsNone(BD.auto_match("60", 13.0, "Shaft"), "no 60xx has a 13 mm bore")
-        self.assertIn("6001 (12 mm), 6002 (15 mm)", BD.no_fit_message("60", 13.0, "Shaft"))
+        e = BD.NoFitError("60", 13.0, "Shaft")
+        self.assertEqual(e.what(), "a 13 mm shaft")
+        self.assertEqual(e.nearest_text(), "6001 (12 mm bore) or 6002 (15 mm bore)")
+        e = BD.NoFitError("62", 29.0, "Housing")
+        self.assertEqual(
+            str(e),
+            "No series 62 bearing fits a 29 mm hole. Nearest: 629 (26 mm OD) or 6200 (30 mm OD)",
+        )
 
     def test_linear_dimensions(self):
         for r in BD.load_table("LM"):

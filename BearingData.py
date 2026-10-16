@@ -403,19 +403,38 @@ def auto_match(series, diameter, match_to):
     return min(fits, key=lambda r: r.B) if fits else None
 
 
-def no_fit_message(series, diameter, match_to):
-    """Why auto_match found nothing, naming the nearest sizes below and above."""
-    key = _fit_key(match_to)
-    rows = load_table(series)
-    below = max((r for r in rows if key(r) < diameter), key=key, default=None)
-    above = min((r for r in rows if key(r) > diameter), key=key, default=None)
-    nearest = ", ".join("{} ({:g} mm)".format(r.name, key(r)) for r in (below, above) if r)
-    return "{}: no size with {} of {:g} mm (nearest: {})".format(
-        SERIES[series][0],
-        "a bore" if match_to == "Shaft" else "an outside diameter",
-        round(diameter, 3),
-        nearest,
-    )
+def series_name(series):
+    """Short name for messages: "series 62", "series NU2", "MR", "LM"."""
+    return "series " + series if series[0].isdigit() or series.startswith("NU") else series
+
+
+class NoFitError(ValueError):
+    """The series has no standard size for an edge (see auto_match)."""
+
+    def __init__(self, series, diameter, match_to):
+        self.series, self.diameter, self.match_to = series, round(diameter, 3), match_to
+        key = _fit_key(match_to)
+        rows = load_table(series)
+        below = max((r for r in rows if key(r) < diameter), key=key, default=None)
+        above = min((r for r in rows if key(r) > diameter), key=key, default=None)
+        self.nearest = [r for r in (below, above) if r]
+        super().__init__(
+            "No {} bearing fits {}. Nearest: {}".format(
+                series_name(series), self.what(), self.nearest_text()
+            )
+        )
+
+    def what(self, count=1):
+        """ "a 29 mm hole" / "a 13 mm shaft"; "29 mm holes" for count > 1."""
+        kind = "shaft" if self.match_to == "Shaft" else "hole"
+        if count > 1:
+            return "{:g} mm {}s".format(self.diameter, kind)
+        return "a {:g} mm {}".format(self.diameter, kind)
+
+    def nearest_text(self):
+        """ "629 (26 mm OD) or 6200 (30 mm OD)"."""
+        key, dim = (_fit_key(self.match_to), "bore" if self.match_to == "Shaft" else "OD")
+        return " or ".join("{} ({:g} mm {})".format(r.name, key(r), dim) for r in self.nearest)
 
 
 def best_match_kind(series, diameter):

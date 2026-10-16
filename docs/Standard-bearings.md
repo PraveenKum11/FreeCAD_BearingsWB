@@ -47,6 +47,6 @@ the outside (Housing); it is set from the geometry when you attach (a hole is Ho
 shaft end Shaft).
 
 `Auto` only uses a size whose bore (or outside diameter) equals the edge's diameter. If the
-series has no such size, no bearing is added and a message names the nearest sizes; pick
-one in `Designation` to attach it anyway. If the edge later changes to a size the series
+series has no such size, no bearing is added and a message names the nearest sizes. To use
+one anyway, keep the edge selected and insert it from Find bearing. If the edge later changes to a size the series
 does not have, the bearing shows an error on recompute.

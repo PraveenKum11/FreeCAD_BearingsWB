@@ -5,6 +5,7 @@ import FreeCAD
 import Part
 
 import BearingBase
+import BearingData as BD
 import BRselection as BRS
 from testutil import DocumentTest, V, close, find_circle, is_invalid, plate_with_hole, tight_bb
 
@@ -64,7 +65,7 @@ class ShaftAttach(DocumentTest):
         shaft.Shape = Part.makeCylinder(6.5, 30)
         self.doc.recompute()
         target = (shaft, [find_circle(shaft, 6.5, 30)])
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(BD.NoFitError, "13 mm shaft"):
             BearingBase.make_bearing("60", attach_to=target, doc=self.doc)
         self.assertEqual(len(self.doc.Objects), 1, "bearing added anyway")
         # an explicit size still attaches

@@ -70,6 +70,20 @@ def owner_object(obj, subname):
     return obj.getSubObject(path + ".", retType=1) if path else obj
 
 
+def element_owner(obj, subname):
+    """(owner label, element) of a selected element: ("Pocket", "Edge20") for
+    "Body.Pocket.;#17:5;:M;CUT;:H-e64:7,E.Edge20" (topological-naming segments dropped)."""
+    parts = subname.split(".")
+    path = [p for p in parts[:-1] if p and not p.startswith(";")]
+    owner = obj
+    if path:
+        try:
+            owner = obj.getSubObject(".".join(path) + ".", retType=1) or obj
+        except Exception:
+            pass
+    return owner.Label, parts[-1]
+
+
 def frame_placement(edge, axial_offset=0.0):
     """Global placement with X radial (through the edge), Z along the edge's axis,
     origin on the axis shifted `axial_offset` from the edge's plane."""

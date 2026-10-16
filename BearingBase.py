@@ -220,7 +220,7 @@ class BearingObject:
         if obj.Designation == BD.AUTO and frame:
             row = BD.auto_match(obj.Series, frame[2], obj.MatchTo)
             if row is None:
-                raise ValueError(BD.no_fit_message(obj.Series, frame[2], obj.MatchTo))
+                raise BD.NoFitError(obj.Series, frame[2], obj.MatchTo)
         elif obj.Designation == BD.AUTO:
             row = BD.get_row(obj.Series, BD.SERIES[obj.Series][2])
         else:
@@ -349,26 +349,23 @@ class ViewProviderBearing:
 
 
 def check_fit(series, attach_to, match_to=None):
-    """None if the series has a size for the attached edge (or it is not a circle), else
-    the reason it has none."""
+    """Raise NoFitError if the series has no size for the attached edge (a non-circular
+    edge passes: the bearing then gets the default size and a warning)."""
     frame = edge_frame(attach_to[0], attach_to[1][0])
     if frame is None:
-        return None
+        return
     match_to = match_to or match_kind(series, frame)
-    if BD.auto_match(series, frame[2], match_to):
-        return None
-    return BD.no_fit_message(series, frame[2], match_to)
+    if BD.auto_match(series, frame[2], match_to) is None:
+        raise BD.NoFitError(series, frame[2], match_to)
 
 
 def make_bearing(series="60", designation=None, attach_to=None, doc=None, **props):
     """Create a bearing. attach_to is (object, ["EdgeN"]). Extra props are set on the object.
 
-    Without a designation the size comes from the attached edge; ValueError if the series
-    has no standard size for it."""
+    Without a designation the size comes from the attached edge; BearingData.NoFitError
+    (a ValueError) if the series has no standard size for it."""
     if attach_to and designation in (None, BD.AUTO):
-        reason = check_fit(series, attach_to, props.get("MatchTo"))
-        if reason:
-            raise ValueError(reason)
+        check_fit(series, attach_to, props.get("MatchTo"))
     doc = doc or FreeCAD.ActiveDocument or FreeCAD.newDocument()
     obj = doc.addObject("Part::FeaturePython", "Bearing")
     BearingObject(obj, series, attach_to)

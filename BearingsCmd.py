@@ -5,6 +5,8 @@ The toolbar shows one drop-down button per group (GROUPS); the menu has a submen
 group with every series.
 """
 
+import re
+
 import FreeCAD
 import FreeCADGui
 
@@ -38,8 +40,8 @@ class InsertBearingCommand:
             for target in edges:
                 try:
                     created.append(BearingBase.make_bearing(self.series, attach_to=target, doc=doc))
-                except ValueError as e:
-                    skipped.append("{}.{}: {}".format(target[0].Label, target[1][0], e))
+                except BD.NoFitError as e:
+                    skipped.append((BRselection.element_owner(target[0], target[1][0]), e))
         else:
             created.append(BearingBase.make_bearing(self.series, doc=doc))
         if created:
@@ -47,17 +49,69 @@ class InsertBearingCommand:
         else:
             doc.abortTransaction()
         if skipped:
-            from PySide import QtWidgets
-
-            QtWidgets.QMessageBox.warning(
-                FreeCADGui.getMainWindow(),
-                "No standard bearing",
-                "No bearing added for:\n\n" + "\n".join(skipped),
-            )
+            self.report_no_fit(skipped, len(edges))
         if created:
             FreeCADGui.Selection.clearSelection()
             for obj in created:
                 FreeCADGui.Selection.addSelection(obj)
+
+    def report_no_fit(self, skipped, n_edges):
+        """Say which edges got no bearing, the nearest sizes, and how to use one anyway."""
+        from PySide import QtWidgets
+
+        def keep_together(text):  # no line breaks inside "29 mm" or "(26 mm OD)"
+            text = re.sub(r"(\d) mm", "\\1\u00a0mm", text)
+            return re.sub(r"\([^)]*\)", lambda m: m.group(0).replace(" ", "\u00a0"), text)
+
+        def where(owners):  # "Pocket: Edge10, Edge11; Pad: Edge3"
+            by_owner = {}
+            for owner, element in owners:
+                by_owner.setdefault(owner, []).append(element)
+            return "; ".join("{}: {}".format(o, ", ".join(els)) for o, els in by_owner.items())
+
+        groups = {}  # one entry per edge size
+        for owner, e in skipped:
+            groups.setdefault((e.diameter, e.match_to), (e, []))[1].append(owner)
+        name = BD.series_name(self.series)
+        if len(groups) == 1:
+            e, owners = next(iter(groups.values()))
+            edges = (
+                "the selected edge"
+                if n_edges == 1
+                else "{} of the {} selected edges".format(len(owners), n_edges)
+            )
+            text = "No {} bearing fits {}: {} ({}).".format(
+                name, edges, e.what(len(owners)), where(owners)
+            )
+            details = ["Nearest sizes: {}.".format(e.nearest_text())]
+        else:
+            text = "No {} bearing fits {} of the {} selected edges.".format(
+                name, len(skipped), n_edges
+            )
+            details = [
+                "{} ({})\nNearest: {}.".format(
+                    e.what(len(owners)).removeprefix("a ").capitalize(),
+                    where(owners),
+                    e.nearest_text(),
+                )
+                for e, owners in groups.values()
+            ]
+        if len(skipped) < n_edges:
+            details.append(
+                "A bearing was added to the other edge."
+                if n_edges - len(skipped) == 1
+                else "Bearings were added to the other edges."
+            )
+        details.append(
+            "To use a nearby size anyway, keep the edge selected and insert it from "
+            "Find bearing, or try another series."
+        )
+        box = QtWidgets.QMessageBox(FreeCADGui.getMainWindow())
+        box.setIcon(QtWidgets.QMessageBox.Warning)
+        box.setWindowTitle("No standard bearing")
+        box.setText(keep_together(text))
+        box.setInformativeText(keep_together("\n\n".join(details)))
+        box.exec()
 
 
 class GroupCommand:
