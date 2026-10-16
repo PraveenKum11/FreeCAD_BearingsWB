@@ -3,8 +3,9 @@
 
 Counts standard bearings and linear bushings (by full designation, including App::Link
 copies and link arrays), printable bearings (one per BearingParameters datum, so grooved
-bodies count too) and the balls the printable bearings need. No FreeCADGui, so it can be
-used from scripts and tested headless.
+bodies count too) and the balls the printable bearings need. The list can be saved as CSV
+or written to a spreadsheet in the document. No FreeCADGui, so it can be used from scripts
+and tested headless.
 """
 
 import csv
@@ -12,6 +13,8 @@ import csv
 import BearingData as BD
 import PrintableBearing as PB
 
+SHEET_NAME = "BearingBOM"  # object name of the BOM spreadsheet; its label is free to change
+SHEET_LABEL = "Bearing BOM"
 COLUMNS = ["Item", "Description", "Bore d (mm)", "OD D (mm)", "Width (mm)", "Quantity", "Objects"]
 
 
@@ -156,3 +159,46 @@ def write_csv(path, items):
         writer = csv.DictWriter(f, fieldnames=COLUMNS)
         writer.writeheader()
         writer.writerows(items)
+
+
+def bom_sheet(doc):
+    """The document's BOM spreadsheet, or None."""
+    obj = doc.getObject(SHEET_NAME)
+    return obj if obj is not None and obj.TypeId == "Spreadsheet::Sheet" else None
+
+
+def _column(i):
+    return chr(ord("A") + i)
+
+
+def write_sheet(doc, items):
+    """Write the BOM to the document's "Bearing BOM" spreadsheet, creating it the first time
+    and replacing its contents after that. A total row sums the quantities. Returns the
+    sheet."""
+    sheet = bom_sheet(doc)
+    if sheet is None:
+        sheet = doc.addObject("Spreadsheet::Sheet", SHEET_NAME)
+        sheet.Label = SHEET_LABEL
+    sheet.clearAll()
+    last = _column(len(COLUMNS) - 1)
+    for j, name in enumerate(COLUMNS):
+        sheet.set(_column(j) + "1", "'" + name)
+    sheet.setStyle("A1:%s1" % last, "bold")
+    for i, row in enumerate(items, 2):
+        for j, name in enumerate(COLUMNS):
+            value = row[name]
+            if value == "":
+                continue
+            # "'" keeps text such as "608" from becoming a number
+            text = ("%g" % value) if isinstance(value, (int, float)) else "'" + str(value)
+            sheet.set("%s%d" % (_column(j), i), text)
+    qty = _column(COLUMNS.index("Quantity"))
+    total = len(items) + 3  # one empty row between the items and the total
+    sheet.set("A%d" % total, "'Total parts")
+    sheet.set("%s%d" % (qty, total), "=sum(%s2:%s%d)" % (qty, qty, max(2, len(items) + 1)))
+    sheet.setStyle("A%d:%s%d" % (total, qty, total), "bold")
+    widths = {"Item": 260, "Description": 330, "Objects": 260}
+    for j, name in enumerate(COLUMNS):
+        sheet.setColumnWidth(_column(j), widths.get(name, 95))
+    doc.recompute()
+    return sheet

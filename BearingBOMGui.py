@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Bill of materials panel and command: list the document's bearings, save them as CSV."""
+"""Bill of materials panel and command: list the document's bearings, write them to a
+spreadsheet or save them as CSV."""
 
 import os
 
@@ -40,11 +41,20 @@ class BOMPanel:
         self.table.setMinimumHeight(260)
         layout.addWidget(self.table)
 
+        buttons = QtGui.QHBoxLayout()
+        self.sheet_btn = QtGui.QPushButton()
+        self.sheet_btn.setToolTip(
+            'Write the list to the "Bearing BOM" spreadsheet in this document, creating it '
+            "the first time and updating it after that."
+        )
+        buttons.addWidget(self.sheet_btn)
         self.save_btn = QtGui.QPushButton("Save CSV…")
         self.save_btn.setToolTip("Save the list as a CSV file, e.g. to open in a spreadsheet.")
-        layout.addWidget(self.save_btn)
+        buttons.addWidget(self.save_btn)
+        layout.addLayout(buttons)
 
         self.skip_hidden.toggled.connect(self.update)
+        self.sheet_btn.clicked.connect(self.write_sheet)
         self.save_btn.clicked.connect(self.save)
         self.update()
 
@@ -63,6 +73,18 @@ class BOMPanel:
         total = sum(r["Quantity"] for r in self.items)
         self.count.setText("%d items, %d parts in total" % (len(self.items), total))
         self.save_btn.setEnabled(bool(self.items))
+        self.sheet_btn.setEnabled(bool(self.items))
+        exists = BearingBOM.bom_sheet(self.doc) is not None
+        self.sheet_btn.setText("Update spreadsheet" if exists else "Create spreadsheet")
+
+    def write_sheet(self):
+        self.doc.openTransaction("Bearing BOM spreadsheet")
+        sheet = BearingBOM.write_sheet(self.doc, self.items)
+        self.doc.commitTransaction()
+        Gui.Selection.clearSelection()
+        Gui.Selection.addSelection(sheet)
+        self.sheet_btn.setText("Update spreadsheet")
+        App.Console.PrintMessage("Bearing BOM written to the spreadsheet %s\n" % sheet.Label)
 
     def save(self):
         base = os.path.splitext(self.doc.FileName)[0] if self.doc.FileName else self.doc.Name
@@ -95,7 +117,7 @@ class BOMCommand:
             "MenuText": "Bearing BOM",
             "ToolTip": "List every bearing in the document with its quantity (standard "
             "bearings, linear bushings, printable bearings and the balls they need), and "
-            "save the list as CSV.",
+            "write the list to a spreadsheet or save it as CSV.",
         }
 
     def IsActive(self):

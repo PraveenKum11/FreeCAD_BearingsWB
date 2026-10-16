@@ -69,3 +69,30 @@ class BOM(DocumentTest):
         items = self.by_item()
         self.assertEqual(items["AXK1528"]["Quantity"], 1)
         self.assertEqual(items["AS1528"]["Quantity"], 2, "an AS washer on each side")
+
+    def test_spreadsheet(self):
+        items = BearingBOM.bom_items(self.doc)
+        sheet = BearingBOM.write_sheet(self.doc, items)
+        self.assertEqual(sheet.Label, "Bearing BOM")
+        self.assertEqual([sheet.get(c + "1") for c in "ABCDEFG"], BearingBOM.COLUMNS)
+        row = 2 + [r["Item"] for r in items].index("608")
+        self.assertEqual(sheet.get("A%d" % row), "608", "designations stay text")
+        self.assertEqual((sheet.get("C%d" % row), sheet.get("F%d" % row)), (8, 7))
+        total = len(items) + 3
+        self.assertEqual(sheet.get("A%d" % total), "Total parts")
+        self.assertEqual(sheet.get("F%d" % total), sum(r["Quantity"] for r in items))
+
+        # a second run rewrites the same sheet, also after the user renamed it
+        sheet.Label = "My bearings"
+        for obj in self.doc.Objects:
+            if getattr(obj, "FullDesignation", "") == "LMK8UU":
+                obj.Visibility = False
+        fewer = BearingBOM.bom_items(self.doc)
+        self.assertEqual(len(fewer), len(items) - 1)
+        again = BearingBOM.write_sheet(self.doc, fewer)
+        self.assertEqual((again.Name, again.Label), (sheet.Name, "My bearings"))
+        sheets = [o for o in self.doc.Objects if o.TypeId == "Spreadsheet::Sheet"]
+        self.assertEqual(len(sheets), 1)
+        total = len(fewer) + 3
+        self.assertEqual(again.get("F%d" % total), sum(r["Quantity"] for r in fewer))
+        self.assertEqual(again.getContents("A%d" % (total + 1)), "", "old total row left over")

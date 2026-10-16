@@ -10,9 +10,13 @@
 ![The Bearing BOM panel](images/bom-panel.png)
 
 Hidden objects (for example a standard bearing you replaced with a printable one) are
-skipped unless you untick **Skip hidden objects**. **Save CSV…** writes the list for a
-spreadsheet, with the columns Item, Description, Bore d, OD D, Width, Quantity and the
-objects it came from.
+skipped unless you untick **Skip hidden objects**.
+
+**Create spreadsheet** writes the list to a spreadsheet named "Bearing BOM" in the
+document, with a total of the quantities at the bottom. After that the button reads
+**Update spreadsheet** and rewrites the same sheet, even if you renamed it. **Save CSV…**
+writes the list to a file instead. Both have the columns Item, Description, Bore d, OD D,
+Width, Quantity and the objects each row came from.
 
 From Python:
 
@@ -20,5 +24,6 @@ From Python:
 import BearingBOM
 
 items = BearingBOM.bom_items(App.ActiveDocument)
+BearingBOM.write_sheet(App.ActiveDocument, items)  # the "Bearing BOM" spreadsheet
 BearingBOM.write_csv("/path/to/bearings.csv", items)
 ```
