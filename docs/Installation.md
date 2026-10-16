@@ -9,7 +9,7 @@ folder as `Bearings` and restart FreeCAD:
 
 ```sh
 cd "<FreeCAD user data>/Mod"
-git clone <repository-url> Bearings
+git clone https://github.com/PraveenKum11/FreeCAD_BearingsWB.git Bearings
 ```
 
 To find the folder, type `App.getUserAppDataDir()` in FreeCAD's Python console. It is,

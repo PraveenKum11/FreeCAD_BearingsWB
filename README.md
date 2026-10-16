@@ -242,7 +242,7 @@ Until the workbench is in the Addon Manager, install it by hand: put this reposi
 FreeCAD's `Mod` folder as `Bearings` and restart FreeCAD.
 
 ```sh
-git clone <repository-url> Bearings
+git clone https://github.com/PraveenKum11/FreeCAD_BearingsWB.git Bearings
 ```
 
 In FreeCAD, `App.getUserAppDataDir()` in the Python console shows the base folder, for
