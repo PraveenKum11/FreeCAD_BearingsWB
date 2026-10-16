@@ -96,6 +96,43 @@ class Flanged(DocumentTest):
         self.assertTrue(close(f.Width.Value, 4.0), "MR105ZZ shielded width %.2f" % f.Width.Value)
 
 
+class PlateWithHoles(DocumentTest):
+    """Bearings in several equal holes of one plate are 634, 634_001, 634_002 (not 635,
+    636, which FreeCAD makes of a taken label)."""
+
+    def setUp(self):
+        super().setUp()
+        box = Part.makeBox(100, 30, 10, V(0, -15, 0))
+        for x in (20, 50, 80):
+            box = box.cut(Part.makeCylinder(8, 12, V(x, 0, -1)))
+        self.plate = self.doc.addObject("Part::Feature", "Plate")
+        self.plate.Shape = box
+        self.doc.recompute()
+        self.edges = [
+            "Edge%d" % i
+            for i, e in enumerate(self.plate.Shape.Edges, 1)
+            if BRS.is_circular_edge(e)
+            and close(e.Curve.Radius, 8)
+            and close(BRS.center_of(e.Curve).z, 10)
+        ]
+        self.assertEqual(len(self.edges), 3)
+
+    def labels(self):
+        self.doc.recompute()
+        return [o.Label for o in self.doc.Objects if hasattr(o, "FullDesignation")]
+
+    def test_one_per_hole(self):
+        for edge in self.edges:
+            BearingBase.make_bearing("63", attach_to=(self.plate, [edge]), doc=self.doc)
+        self.assertEqual(self.labels(), ["634", "634_001", "634_002"])
+
+    def test_copies_moved_to_the_other_holes(self):
+        b = BearingBase.make_bearing("63", attach_to=(self.plate, [self.edges[0]]), doc=self.doc)
+        for edge in self.edges[1:]:
+            self.doc.copyObject(b).BaseObject = (self.plate, [edge])
+        self.assertEqual(self.labels(), ["634", "634_001", "634_002"])
+
+
 class Persistence(DocumentTest):
     def test_save_reopen_recompute(self):
         plate = plate_with_hole(self.doc, 22.0)
@@ -153,6 +190,30 @@ class Labels(DocumentTest):
         b.touch()
         self.doc.recompute()
         self.assertEqual(b.Label, "608_001")
+
+    def test_copy_gets_a_counter(self):
+        """Copy & paste / Duplicate selection: FreeCAD names the copies 609, 610."""
+        b = BearingBase.make_bearing("60", "608", doc=self.doc)
+        copies = [self.doc.copyObject(b) for _ in range(2)]
+        self.doc.recompute()
+        self.assertEqual([o.Label for o in [b] + copies], ["608", "608_001", "608_002"])
+        copies[0].Closure = "ZZ"
+        self.doc.recompute()
+        self.assertEqual(copies[0].Label, "608ZZ", "a copy's label follows its designation")
+
+    def test_copy_after_reopen(self):
+        name = BearingBase.make_bearing("60", "608", doc=self.doc).Name
+        doc = self.reopen()
+        copy = doc.copyObject(doc.getObject(name))
+        doc.recompute()
+        self.assertEqual(copy.Label, "608_001")
+
+    def test_copy_of_renamed_bearing_keeps_its_label(self):
+        b = BearingBase.make_bearing("60", "608", doc=self.doc)
+        b.Label = "Spindle"
+        copy = self.doc.copyObject(b)
+        self.doc.recompute()
+        self.assertTrue(copy.Label.startswith("Spindle"), copy.Label)
 
     def test_freed_label_is_reused(self):
         first = BearingBase.make_bearing("60", "608", doc=self.doc)

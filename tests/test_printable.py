@@ -169,6 +169,17 @@ class CreateRaces(DocumentTest):
         self.assertEqual(self.part.Label, "Bearing 22x8x8")
         self.assertEqual(self.chk.Designation, "")
 
+    def test_same_size_gets_a_counter(self):
+        """A second printable of the same size is "..._001": setting the taken label would
+        make FreeCAD bump the trailing number ("Bearing 22x8x8" -> "Bearing 22x8x9")."""
+        self.params.Height = 8
+        self.doc.recompute()
+        second = PB.create_races(self.doc, FreeCAD.Placement(), dict(V608, Height=8), False, False)
+        self.doc.recompute()
+        part = second.getParentGeoFeatureGroup().getParentGeoFeatureGroup()
+        self.assertEqual(part.Label, "Bearing 22x8x8_001")
+        self.assertEqual(self.part.Label, "Bearing 22x8x8")
+
     def test_user_label_kept(self):
         self.part.Label = "Spindle"
         self.params.Height = 8

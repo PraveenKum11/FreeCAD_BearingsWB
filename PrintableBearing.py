@@ -53,6 +53,7 @@ from BRselection import (  # noqa: F401  (frame_placement is part of this module
     global_placement,
     nearest_solid,
 )
+from BRutils import free_label
 
 TOL = 1e-6
 PARAMS = "BearingParameters"
@@ -590,7 +591,7 @@ def create_races(doc, placement, values, reverse=False, cage=True, balls=False):
     """
     validate(values, cage, balls)
     part = doc.addObject("App::Part", "Bearing")
-    part.Label = bearing_label(values)
+    part.Label = free_label(part, bearing_label(values))
     part.Placement = placement
     body = doc.addObject("PartDesign::Body", "Races")
     part.addObject(body)  # the cage and balls bodies join it (follow_bearing)
@@ -792,9 +793,11 @@ class PrintableBearingCheck:
             target = bearing_label(v)
             auto = getattr(self, "auto_label", None)
             # follow the size until the user renames the Part
-            if part.Label in (auto, part.Name) and part.Label != target:
-                part.Label = target
-                self.auto_label = part.Label
+            if part.Label in (auto, part.Name):
+                target = free_label(part, target)
+                if part.Label != target:
+                    part.Label = target
+                    self.auto_label = part.Label
         validate(v, obj.HasCage, obj.HasBalls)  # raises: the object shows the error
 
     def dumps(self):

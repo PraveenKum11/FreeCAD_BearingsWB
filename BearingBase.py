@@ -8,7 +8,7 @@ import FreeCAD
 import BearingData as BD
 import BearingGeometry as BG
 import BRselection as BRS
-from BRutils import icon
+from BRutils import free_label, icon
 
 V = FreeCAD.Vector
 GROUP = "Bearing"
@@ -40,17 +40,6 @@ def match_kind(series, frame):
     return BD.best_match_kind(series, frame[2])
 
 
-def free_label(obj, base):
-    """`base` if no other object in the document has that label, else the first free
-    "base_001", "base_002", ..."""
-    taken = {o.Label for o in obj.Document.Objects if o is not obj}
-    label, n = base, 0
-    while label in taken:
-        n += 1
-        label = "%s_%03d" % (base, n)
-    return label
-
-
 class BearingObject:
     def __init__(self, obj, series="60", attach_to=None):
         obj.Proxy = self
@@ -58,6 +47,7 @@ class BearingObject:
         # FreeCAD's initial label is not always equal to Name (e.g. after a GUI delete)
         self.auto_label = obj.Label
         self.auto_target = None
+        self.owner = obj.Name
 
         obj.addProperty("App::PropertyEnumeration", "Series", GROUP, "Bearing series")
         obj.Series = list(BD.SERIES.keys())
@@ -208,6 +198,8 @@ class BearingObject:
             self._add_flange_shape(obj)
         if not hasattr(obj, "Variant"):
             self._add_variant(obj)
+        if getattr(self, "owner", None) is None:  # documents from before copy detection
+            self.owner = obj.Name
         self._update_editor_modes(obj)
 
     def _attached_frame(self, obj):
@@ -289,6 +281,15 @@ class BearingObject:
         """
         target = obj.FullDesignation
         auto = getattr(self, "auto_label", None)
+        owner = getattr(self, "owner", None)
+        if owner is not None and owner != obj.Name:
+            # a copy (copy & paste, duplicate): its state is the original's, and FreeCAD
+            # made its label unique by bumping a trailing number ("634" -> "635"). Such a
+            # label is still ours to set; a renamed original's copy keeps its label.
+            self.owner = obj.Name
+            if auto and re.sub(r"\d+$", "", obj.Label) == re.sub(r"\d+$", "", auto):
+                auto = obj.Label
+                self.auto_label = auto
         # FreeCAD's default labels ("Bearing", "Bearing002") also count as auto, which repairs
         # labels left stuck by v0.1's original Label == Name check
         if obj.Label not in (obj.Name, auto) and not re.fullmatch(r"Bearing\d*", obj.Label):
@@ -304,6 +305,7 @@ class BearingObject:
         return {
             "auto_label": getattr(self, "auto_label", None),
             "auto_target": getattr(self, "auto_target", None),
+            "owner": getattr(self, "owner", None),
         }
 
     def loads(self, state):
@@ -312,6 +314,7 @@ class BearingObject:
         self.auto_label = state.get("auto_label")
         # documents saved before auto_target existed stored the designation in auto_label
         self.auto_target = state.get("auto_target", self.auto_label)
+        self.owner = state.get("owner")
 
 
 class ViewProviderBearing:
