@@ -272,7 +272,6 @@ try:
     pump(0.2)
     expect(sg.getNumChildren() == n0, "no preview left after Cancel")
     # bill of materials of everything built above
-    import BearingBOM
     import BearingBOMGui
 
     bom = BearingBOMGui.open_panel()
@@ -288,19 +287,20 @@ try:
         any(k.startswith("Printable bearing") for k in items), "BOM lists the printable bearings"
     )
     expect(bom.table.rowCount() == len(bom.items) and bom.save_btn.isEnabled(), "BOM table filled")
-    expect(bom.sheet_btn.text() == "Create spreadsheet", "BOM offers to create a spreadsheet")
+
+    def sheets():
+        return [o for o in doc.Objects if o.TypeId == "Spreadsheet::Sheet"]
+
     bom.sheet_btn.click()
     pump(0.3)
-    sheet = BearingBOM.bom_sheet(doc)
+    sheet = sheets()[-1] if sheets() else None
     expect(
         sheet is not None and sheet.get("A1") == "Item" and Gui.Selection.isSelected(sheet),
         "BOM spreadsheet written and selected",
     )
-    expect(bom.sheet_btn.text() == "Update spreadsheet", "then offers to update it")
     bom.sheet_btn.click()
     pump(0.3)
-    n_sheets = len([o for o in doc.Objects if o.TypeId == "Spreadsheet::Sheet"])
-    expect(n_sheets == 1, "update rewrites the same sheet (%d sheets)" % n_sheets)
+    expect(len(sheets()) == 2, "a second click adds a second sheet (%d)" % len(sheets()))
     bom.reject()
     pump(0.2)
     Gui.ActiveDocument.setEdit(sheet.Name)

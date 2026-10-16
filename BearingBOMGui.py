@@ -42,10 +42,10 @@ class BOMPanel:
         layout.addWidget(self.table)
 
         buttons = QtGui.QHBoxLayout()
-        self.sheet_btn = QtGui.QPushButton()
+        self.sheet_btn = QtGui.QPushButton("Create spreadsheet")
         self.sheet_btn.setToolTip(
-            'Write the list to the "Bearing BOM" spreadsheet in this document, creating it '
-            "the first time and updating it after that."
+            'Add a "Bearing BOM" spreadsheet with this list to the document. Each click '
+            "adds a new one."
         )
         buttons.addWidget(self.sheet_btn)
         self.save_btn = QtGui.QPushButton("Save CSV…")
@@ -74,8 +74,6 @@ class BOMPanel:
         self.count.setText("%d items, %d parts in total" % (len(self.items), total))
         self.save_btn.setEnabled(bool(self.items))
         self.sheet_btn.setEnabled(bool(self.items))
-        exists = BearingBOM.bom_sheet(self.doc) is not None
-        self.sheet_btn.setText("Update spreadsheet" if exists else "Create spreadsheet")
 
     def write_sheet(self):
         self.doc.openTransaction("Bearing BOM spreadsheet")
@@ -83,7 +81,6 @@ class BOMPanel:
         self.doc.commitTransaction()
         Gui.Selection.clearSelection()
         Gui.Selection.addSelection(sheet)
-        self.sheet_btn.setText("Update spreadsheet")
         App.Console.PrintMessage("Bearing BOM written to the spreadsheet %s\n" % sheet.Label)
 
     def save(self):

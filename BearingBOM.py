@@ -12,10 +12,10 @@ import csv
 
 import BearingData as BD
 import PrintableBearing as PB
+from BRutils import free_label
 
-SHEET_NAME = "BearingBOM"  # object name of the BOM spreadsheet; its label is free to change
-SHEET_LABEL = "Bearing BOM"
 COLUMNS = ["Item", "Description", "Bore d (mm)", "OD D (mm)", "Width (mm)", "Quantity", "Objects"]
+SHEET_COLUMNS = COLUMNS[:-1]  # the spreadsheet leaves out the objects each row came from
 
 
 def is_bearing(obj):
@@ -161,44 +161,35 @@ def write_csv(path, items):
         writer.writerows(items)
 
 
-def bom_sheet(doc):
-    """The document's BOM spreadsheet, or None."""
-    obj = doc.getObject(SHEET_NAME)
-    return obj if obj is not None and obj.TypeId == "Spreadsheet::Sheet" else None
-
-
 def _column(i):
     return chr(ord("A") + i)
 
 
 def write_sheet(doc, items):
-    """Write the BOM to the document's "Bearing BOM" spreadsheet, creating it the first time
-    and replacing its contents after that. A total row sums the quantities. Returns the
-    sheet."""
-    sheet = bom_sheet(doc)
-    if sheet is None:
-        sheet = doc.addObject("Spreadsheet::Sheet", SHEET_NAME)
-        sheet.Label = SHEET_LABEL
-    sheet.clearAll()
-    last = _column(len(COLUMNS) - 1)
-    for j, name in enumerate(COLUMNS):
+    """Write the BOM to a new spreadsheet labelled "Bearing BOM" ("Bearing BOM_001" if that
+    is taken), with the columns of SHEET_COLUMNS and a total row summing the quantities.
+    Returns the sheet."""
+    sheet = doc.addObject("Spreadsheet::Sheet", "BearingBOM")
+    sheet.Label = free_label(sheet, "Bearing BOM")
+    last = _column(len(SHEET_COLUMNS) - 1)
+    for j, name in enumerate(SHEET_COLUMNS):
         sheet.set(_column(j) + "1", "'" + name)
     sheet.setStyle("A1:%s1" % last, "bold")
     for i, row in enumerate(items, 2):
-        for j, name in enumerate(COLUMNS):
+        for j, name in enumerate(SHEET_COLUMNS):
             value = row[name]
             if value == "":
                 continue
             # "'" keeps text such as "608" from becoming a number
             text = ("%g" % value) if isinstance(value, (int, float)) else "'" + str(value)
             sheet.set("%s%d" % (_column(j), i), text)
-    qty = _column(COLUMNS.index("Quantity"))
+    qty = _column(SHEET_COLUMNS.index("Quantity"))
     total = len(items) + 3  # one empty row between the items and the total
     sheet.set("A%d" % total, "'Total parts")
     sheet.set("%s%d" % (qty, total), "=sum(%s2:%s%d)" % (qty, qty, max(2, len(items) + 1)))
     sheet.setStyle("A%d:%s%d" % (total, qty, total), "bold")
-    widths = {"Item": 260, "Description": 330, "Objects": 260}
-    for j, name in enumerate(COLUMNS):
+    widths = {"Item": 260, "Description": 330}
+    for j, name in enumerate(SHEET_COLUMNS):
         sheet.setColumnWidth(_column(j), widths.get(name, 95))
     doc.recompute()
     return sheet
