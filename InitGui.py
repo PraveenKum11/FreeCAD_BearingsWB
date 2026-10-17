@@ -12,9 +12,15 @@ class BearingsWorkbench(Workbench):
         import BearingBOMGui  # noqa: F401  (registers Bearings_BOM)
         import BearingsCmd
         import BearingSearchGui  # noqa: F401  (registers Bearings_Search)
+        import BearingSettingsGui  # noqa: F401  (registers Bearings_Settings)
         import PrintableBearingGui  # noqa: F401  (registers Bearings_PrintableBearing)
 
-        tools = ["Bearings_Search", "Bearings_PrintableBearing", "Bearings_BOM"]
+        tools = [
+            "Bearings_Search",
+            "Bearings_PrintableBearing",
+            "Bearings_BOM",
+            "Bearings_Settings",
+        ]
         self.appendToolbar("Bearings", BearingsCmd.GROUP_COMMANDS)
         self.appendToolbar("Bearing tools", tools)
         for title, commands in BearingsCmd.MENUS:

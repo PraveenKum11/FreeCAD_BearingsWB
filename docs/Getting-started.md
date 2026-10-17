@@ -6,8 +6,9 @@
 
 - **Bearings**: one drop-down per family. Click the arrow to pick a series; the button
   remembers the last one. The **Bearings** menu lists every series by family.
-- **Bearing tools**: [[Find bearing]], [[3D-printable bearing|Printable bearings]] and
-  [[Bearing BOM]].
+- **Bearing tools**: [[Find bearing]], [[3D-printable bearing|Printable bearings]],
+  [[Bearing BOM]] and **Settings** (the fit allowance, see
+  [[Standard bearings|Standard bearings#attaching]]).
 
 ## Insert a bearing
 
@@ -31,6 +32,8 @@ property editor; the shape updates on recompute.
 
 The **Bearing info** group shows what the part is: its full designation (`608-2RS`), bore,
 outside diameter, width and, for rolling bearings, the computed ball size and count.
+`FitClearance` is the clearance to the attached edge: hole minus outside diameter, or bore
+minus shaft (negative if a size you picked doesn't fit).
 
 ## Attach it to a hole or a shaft
 

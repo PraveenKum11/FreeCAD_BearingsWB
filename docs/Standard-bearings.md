@@ -46,7 +46,12 @@ See [[Attach it to a hole or a shaft|Getting started#attach-it-to-a-hole-or-a-sh
 the outside (Housing); it is set from the geometry when you attach (a hole is Housing, a
 shaft end Shaft).
 
-`Auto` only uses a size whose bore (or outside diameter) equals the edge's diameter. If the
-series has no such size, no bearing is added and a message names the nearest sizes. To use
+`Auto` uses a size whose outside diameter is equal to the hole or up to the **fit
+allowance** smaller, or whose bore is equal to the shaft or up to the allowance larger, so a
+22.2 mm hole or a 7.98 mm shaft still gets a 608. The closest size wins, and a bearing is
+never picked that would be too big for the hole or too small for the shaft. The allowance
+is 0.5 mm by default; change it in **Bearing tools → Settings** (0 needs an exact
+match). `FitClearance` in the Bearing info group shows the clearance left. If the
+series has no size that fits, no bearing is added and a message names the nearest sizes. To use
 one anyway, keep the edge selected and insert it from Find bearing. If the edge later changes to a size the series
 does not have, the bearing shows an error on recompute.

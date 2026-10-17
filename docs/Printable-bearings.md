@@ -15,7 +15,8 @@ steel balls or airsoft BBs; everything else comes off the printer.
 2. Run the command. The task panel opens next to the 3D view, and a **live preview**
    shows the inner and outer diameter as labelled rings and a see-through bearing.
 3. Pick a **catalog size** (608, 625, 6204, …; with a selected edge, only sizes that fit
-   it) or type ID, OD and height.
+   it, allowing the fit allowance from **Bearing tools → Settings**, so a 22.2 mm hole
+   still lists the 608) or type ID, OD and height.
 4. Pick a **ball preset** (3 mm, 1/8", 4 mm, 4.5 mm BB, 5 mm, 6 mm airsoft = 5.95 mm,
    6 mm, 1/4") or type the ball diameter, and the number of balls. A red status line says
    what doesn't fit; nothing is resized behind your back.

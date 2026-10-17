@@ -5,6 +5,7 @@ import FreeCAD as App
 import FreeCADGui as Gui
 from PySide import QtCore, QtGui
 
+import BearingData as BD
 import BRselection as BRS
 import PrintableBearing as PB
 from BRutils import icon
@@ -426,15 +427,17 @@ class TaskPanel:
     # ------------------------------------------------------------ catalog size / presets
 
     def fill_sizes(self):
-        """Catalog sizes that fit the locked diameter (all of them without an edge)."""
+        """Catalog sizes that fit the locked diameter (all of them without an edge): a bore
+        up to the fit allowance larger than a shaft, an OD up to it smaller than a hole."""
         self.size.blockSignals(True)
         self.size.clear()
         self.size.addItem(CUSTOM)
         locked = self.locked_diameter()
+        allowance = BD.fit_allowance()
         for name, d, D, B in PB.catalog_rows():
             if locked is not None:
                 key, dia = locked
-                if abs((d if key == "ID" else D) - dia) > 1e-6:
+                if not BD.within_allowance(d - dia if key == "ID" else dia - D, allowance):
                     continue
             self.size.addItem("%s  (%gx%gx%g)" % (name, d, D, B), (d, D, B))
         self.size.blockSignals(False)
@@ -450,7 +453,7 @@ class TaskPanel:
         data = self.size.itemData(index)
         if not data:
             return
-        # with an edge, the list only holds sizes whose locked diameter matches it
+        # with an edge, the list only holds sizes that fit it, possibly with some clearance
         d, D, B = data
         self.id_.setValue(d)
         self.od.setValue(D)

@@ -122,6 +122,7 @@ class BearingObject:
             "Designation including flange and closure codes",
         )
         obj.setEditorMode("FullDesignation", 1)
+        self._add_fit_clearance(obj)
 
         if attach_to:
             obj.BaseObject = attach_to
@@ -129,6 +130,17 @@ class BearingObject:
             if frame:
                 obj.MatchTo = match_kind(series, frame)
         self._update_editor_modes(obj)
+
+    @staticmethod
+    def _add_fit_clearance(obj):
+        obj.addProperty(
+            "App::PropertyDistance",
+            "FitClearance",
+            INFO,
+            "Hole diameter minus OD, or bore minus shaft diameter, for the attached edge; "
+            "negative if the bearing doesn't fit it",
+        )
+        obj.setEditorMode("FitClearance", 1)
 
     @staticmethod
     def _add_flange_shape(obj):
@@ -198,6 +210,8 @@ class BearingObject:
             self._add_flange_shape(obj)
         if not hasattr(obj, "Variant"):
             self._add_variant(obj)
+        if not hasattr(obj, "FitClearance"):
+            self._add_fit_clearance(obj)
         if getattr(self, "owner", None) is None:  # documents from before copy detection
             self.owner = obj.Name
         self._update_editor_modes(obj)
@@ -249,6 +263,8 @@ class BearingObject:
         obj.BallDiameter = ins.Dw
         obj.BallCount = ins.Z
         obj.FullDesignation = BD.full_designation(row, obj.Closure, flanged, flange_shape, variant)
+        if hasattr(obj, "FitClearance"):
+            obj.FitClearance = BD.fit_clearance(row, frame[2], obj.MatchTo) if frame else 0.0
         self._update_label(obj)
 
         placement = obj.Placement

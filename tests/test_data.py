@@ -27,9 +27,9 @@ class Tables(unittest.TestCase):
                         self.assertGreaterEqual(r.B_shielded, r.B, "shielded width < open width")
 
     def test_auto_match_needs_a_standard_size(self):
-        self.assertEqual(BD.auto_match("60", 8.0, "Shaft").name, "608")
-        self.assertEqual(BD.auto_match("60", 22.004, "Housing").name, "608")
-        self.assertIsNone(BD.auto_match("60", 13.0, "Shaft"), "no 60xx has a 13 mm bore")
+        self.assertEqual(BD.auto_match("60", 8.0, "Shaft", 0.5).name, "608")
+        self.assertEqual(BD.auto_match("60", 22.004, "Housing", 0.5).name, "608")
+        self.assertIsNone(BD.auto_match("60", 13.0, "Shaft", 0.5), "no 60xx has a 13 mm bore")
         e = BD.NoFitError("60", 13.0, "Shaft")
         self.assertEqual(e.what(), "a 13 mm shaft")
         self.assertEqual(e.nearest_text(), "6001 (12 mm bore) or 6002 (15 mm bore)")
@@ -38,6 +38,30 @@ class Tables(unittest.TestCase):
             str(e),
             "No series 62 bearing fits a 29 mm hole. Nearest: 629 (26 mm OD) or 6200 (30 mm OD)",
         )
+
+    def test_auto_match_allows_clearance_on_one_side(self):
+        # a hole a little larger than the OD, a shaft a little smaller than the bore
+        self.assertEqual(BD.auto_match("60", 22.2, "Housing", 0.5).name, "608")
+        self.assertEqual(BD.auto_match("60", 7.98, "Shaft", 0.5).name, "608")
+        self.assertEqual(BD.auto_match("LM", 7.98, "Shaft", 0.5).name, "LM8UU")
+        # never the other way: the bearing wouldn't go in or onto it
+        self.assertIsNone(BD.auto_match("60", 21.8, "Housing", 0.5))
+        self.assertIsNone(BD.auto_match("60", 8.02, "Shaft", 0.5))
+        # beyond the allowance, or with none
+        self.assertIsNone(BD.auto_match("60", 22.6, "Housing", 0.5))
+        self.assertIsNone(BD.auto_match("60", 22.2, "Housing", 0.0))
+        self.assertEqual(BD.auto_match("60", 22.6, "Housing", 1.0).name, "608")
+
+    def test_auto_match_takes_the_closest_fit(self):
+        # MR bores 3 and 4 mm both fit a 2.9 mm shaft with 1.5 mm allowed: 3 is closer
+        self.assertEqual(BD.auto_match("MR", 2.9, "Shaft", 1.5).d, 3.0)
+        self.assertEqual(BD.auto_match("MR", 3.9, "Shaft", 1.5).d, 4.0)
+
+    def test_fit_clearance(self):
+        row = BD.get_row("60", "608")
+        self.assertAlmostEqual(BD.fit_clearance(row, 22.2, "Housing"), 0.2)
+        self.assertAlmostEqual(BD.fit_clearance(row, 7.98, "Shaft"), 0.02)
+        self.assertAlmostEqual(BD.fit_clearance(row, 21.0, "Housing"), -1.0)
 
     def test_linear_dimensions(self):
         for r in BD.load_table("LM"):

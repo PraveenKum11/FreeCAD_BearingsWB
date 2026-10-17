@@ -104,7 +104,8 @@ class InsertBearingCommand:
             )
         details.append(
             "To use a nearby size anyway, keep the edge selected and insert it from "
-            "Find bearing, or try another series."
+            "Find bearing, or try another series. Auto sizes allow up to {:g} mm of "
+            "clearance (Bearing tools → Settings).".format(BD.fit_allowance())
         )
         box = QtWidgets.QMessageBox(FreeCADGui.getMainWindow())
         box.setIcon(QtWidgets.QMessageBox.Warning)

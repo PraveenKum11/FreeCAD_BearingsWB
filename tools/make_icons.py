@@ -139,6 +139,27 @@ def magnifier():
     ]
 
 
+def gear():
+    """A gear (settings) over the bottom-right corner."""
+    import math
+
+    cx = cy = 35.0
+    teeth, r_out, r_in = 8, 12.0, 9.0
+    pts = []
+    for i in range(teeth):
+        a = 2 * math.pi * i / teeth
+        step = 2 * math.pi / teeth
+        # each tooth: flat top over 30 % of the pitch, flanks down to the root circle
+        for da, r in ((-0.30, r_in), (-0.15, r_out), (0.15, r_out), (0.30, r_in)):
+            t = a + da * step
+            pts.append(f"{cx + r * math.cos(t):.2f},{cy + r * math.sin(t):.2f}")
+    return [
+        f'<path d="M{" ".join(pts)}Z" fill="{BADGE}" stroke="#ffffff" stroke-width="1" '
+        'stroke-linejoin="round"/>',
+        f'<circle cx="{cx:g}" cy="{cy:g}" r="4" fill="#ffffff"/>',
+    ]
+
+
 def svg(parts):
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE:g}" height="{SIZE:g}" '
@@ -174,11 +195,12 @@ def main():
     write("BearingsWB.svg", ball)
     write("BearingBOM.svg", ball + bom_sheet())
     write("BearingSearch.svg", ball + magnifier())
+    write("BearingSettings.svg", ball + gear())
 
     v = dict(PB.CAGE_DEFAULTS, ID=8, OD=22, Height=7, BallDiameter=4, NumBalls=7)
     printable = Part.makeCompound([s for _, s in PB.preview_shapes(v)])
     write("PrintableBearing.svg", drawing(quarter_cut(printable), METRIC) + badge("3D"))
-    print("make_icons: wrote", len(BD.SERIES) + 4, "icons to", OUT, flush=True)
+    print("make_icons: wrote", len(BD.SERIES) + 5, "icons to", OUT, flush=True)
 
 
 main()

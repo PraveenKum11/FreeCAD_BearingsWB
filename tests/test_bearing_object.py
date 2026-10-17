@@ -85,6 +85,56 @@ class ShaftAttach(DocumentTest):
         self.assertTrue(is_invalid(b), "Auto bearing on a 13 mm shaft should fail")
 
 
+class FitAllowance(DocumentTest):
+    """Auto sizes accept a hole or shaft modelled with a little clearance."""
+
+    def setUp(self):
+        super().setUp()
+        self.prefs = FreeCAD.ParamGet(BD.PREFS)
+        self.saved = self.prefs.GetFloat("FitAllowance", BD.DEFAULT_FIT_ALLOWANCE)
+        self.prefs.SetFloat("FitAllowance", 0.5)
+
+    def tearDown(self):
+        self.prefs.SetFloat("FitAllowance", self.saved)
+        super().tearDown()
+
+    def test_hole_with_clearance(self):
+        plate = plate_with_hole(self.doc, 22.2)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "60", attach_to=(plate, [find_circle(plate, 11.1, 10)]), doc=self.doc
+        )
+        self.assertEqual(b.FullDesignation, "608")
+        self.assertTrue(close(b.FitClearance.Value, 0.2), b.FitClearance)
+
+    def test_shaft_with_clearance(self):
+        shaft = self.doc.addObject("Part::Feature", "Shaft")
+        shaft.Shape = Part.makeCylinder(3.99, 30)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "LM", attach_to=(shaft, [find_circle(shaft, 3.99, 30)]), doc=self.doc
+        )
+        self.assertEqual(b.FullDesignation, "LM8UU")
+        self.assertTrue(close(b.FitClearance.Value, 0.02), b.FitClearance)
+
+    def test_no_allowance_needs_an_exact_size(self):
+        self.prefs.SetFloat("FitAllowance", 0.0)
+        plate = plate_with_hole(self.doc, 22.2)
+        self.doc.recompute()
+        with self.assertRaises(BD.NoFitError):
+            BearingBase.make_bearing(
+                "60", attach_to=(plate, [find_circle(plate, 11.1, 10)]), doc=self.doc
+            )
+
+    def test_explicit_size_shows_interference(self):
+        plate = plate_with_hole(self.doc, 20.0)
+        self.doc.recompute()
+        b = BearingBase.make_bearing(
+            "60", "608", attach_to=(plate, [find_circle(plate, 10, 10)]), doc=self.doc
+        )
+        self.assertTrue(close(b.FitClearance.Value, -2.0), b.FitClearance)
+
+
 class Flanged(DocumentTest):
     def test_flanged_series_change(self):
         f = BearingBase.make_bearing("68", "688", doc=self.doc, Flanged=True, Closure="ZZ")

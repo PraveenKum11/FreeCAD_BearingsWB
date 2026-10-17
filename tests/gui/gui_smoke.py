@@ -328,6 +328,51 @@ try:
     ]
     n_buttons = len([a for a in bars[0].actions() if a.isVisible()]) if bars else 0
     expect(n_buttons == len(BearingsCmd.GROUPS), "Bearings toolbar: %d buttons" % n_buttons)
+
+    # settings dialog: the fit allowance, used by the printable bearing's catalog sizes
+    import BearingData as BD
+    import BearingSettingsGui
+
+    expect("Bearings_Settings" in Gui.listCommands(), "settings command registered")
+    prefs = App.ParamGet(BD.PREFS)
+    saved = prefs.GetFloat("FitAllowance", BD.DEFAULT_FIT_ALLOWANCE)
+    try:
+        dlg = BearingSettingsGui.SettingsDialog(Gui.getMainWindow())
+        dlg.allowance.setValue(0.0)
+        dlg.accept()
+        expect(BD.fit_allowance() == 0.0, "settings dialog saves the allowance")
+        loose = App.newDocument("Loose")
+        plate2 = loose.addObject("Part::Feature", "Plate")
+        plate2.Shape = Part.makeBox(40, 40, 10, App.Vector(-20, -20, 0)).cut(
+            Part.makeCylinder(11.1, 12, App.Vector(0, 0, -1))
+        )
+        loose.recompute()
+
+        def printable_sizes():
+            Gui.Selection.clearSelection()
+            Gui.Selection.addSelection(loose.Name, "Plate", circle_edge(plate2.Shape, 11.1, 10))
+            panel = PG.open_panel()
+            pump(0.2)
+            names = [panel.size.itemText(i).split()[0] for i in range(panel.size.count())]
+            return panel, names
+
+        p6, names = printable_sizes()
+        expect("608" not in names, "no allowance: no catalog size for a 22.2 mm hole")
+        p6.reject()
+        pump(0.2)
+        dlg.defaults()
+        dlg.accept()
+        p6, names = printable_sizes()
+        expect("608" in names and "6201" not in names, "0.5 mm allowance lists 608")
+        p6.size.setCurrentIndex(names.index("608"))
+        pump(0.2)
+        expect(abs(p6.od.value() - 22) < 1e-6, "catalog 608 sets OD 22 in the 22.2 hole")
+        p6.reject()
+        pump(0.2)
+        App.closeDocument(loose.Name)
+    finally:
+        prefs.SetFloat("FitAllowance", saved)
+
     log("RESULT", "PASS" if not problems else "FAIL (%d)" % len(problems))
     log("OK")
 except Exception:

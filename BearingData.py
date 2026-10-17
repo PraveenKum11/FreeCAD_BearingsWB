@@ -389,18 +389,53 @@ def full_designation(row, closure, flanged, flange_shape="Round", variant=None):
 
 
 FIT_TOLERANCE = 0.01  # mm: an edge this close to a bore / OD fits it
+PREFS = "User parameter:BaseApp/Preferences/Mod/Bearings"
+DEFAULT_FIT_ALLOWANCE = 0.5  # mm of clearance an Auto size may leave (hole or shaft)
+
+
+def fit_allowance():
+    """The FitAllowance preference in mm (DEFAULT_FIT_ALLOWANCE outside FreeCAD)."""
+    try:
+        import FreeCAD
+    except ImportError:
+        return DEFAULT_FIT_ALLOWANCE
+    return max(0.0, FreeCAD.ParamGet(PREFS).GetFloat("FitAllowance", DEFAULT_FIT_ALLOWANCE))
 
 
 def _fit_key(match_to):
     return (lambda r: r.d) if match_to == "Shaft" else (lambda r: r.D)
 
 
-def auto_match(series, diameter, match_to):
-    """The row whose bore (match_to='Shaft') or OD ('Housing') equals diameter (the
-    narrowest if several do), or None if the series has no such size."""
-    key = _fit_key(match_to)
-    fits = [r for r in load_table(series) if abs(key(r) - diameter) <= FIT_TOLERANCE]
-    return min(fits, key=lambda r: r.B) if fits else None
+def fit_clearance(row, diameter, match_to):
+    """Clearance between the edge and the bearing in mm: hole minus OD (Housing) or bore
+    minus shaft (Shaft). Negative means the bearing is too big for the hole or too small
+    for the shaft."""
+    if match_to == "Shaft":
+        return row.d - diameter
+    return diameter - row.D
+
+
+def within_allowance(clearance, allowance=None):
+    """True if a clearance (see fit_clearance) is a fit: not negative, at most the allowance
+    (the FitAllowance preference by default)."""
+    if allowance is None:
+        allowance = fit_allowance()
+    return -FIT_TOLERANCE <= clearance <= allowance + FIT_TOLERANCE
+
+
+def auto_match(series, diameter, match_to, allowance=None):
+    """The row that fits the edge: a bore (match_to='Shaft') up to `allowance` mm larger
+    than the shaft, or an OD ('Housing') up to `allowance` mm smaller than the hole. The
+    closest fit wins (the narrowest of equals); None if the series has no such size.
+    allowance defaults to the FitAllowance preference."""
+    if allowance is None:
+        allowance = fit_allowance()
+
+    def gap(r):
+        return fit_clearance(r, diameter, match_to)
+
+    fits = [r for r in load_table(series) if within_allowance(gap(r), allowance)]
+    return min(fits, key=lambda r: (round(abs(gap(r)), 6), r.B)) if fits else None
 
 
 def series_name(series):

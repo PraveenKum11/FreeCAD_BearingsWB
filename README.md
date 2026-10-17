@@ -70,7 +70,9 @@ Miniature sizes also come **flanged** (F688, MF105, FR188).
 
 Select one or more circular edges, then click a series button. A hole edge gets the
 bearing whose **outside diameter** matches, sitting in the hole flush with the face; a
-shaft end gets the bearing whose **bore** matches, sliding onto the shaft. The bearing
+shaft end gets the bearing whose **bore** matches, sliding onto the shaft. A little
+clearance is fine: a 22.2 mm hole or a 7.98 mm shaft still gets a 608 (up to 0.5 mm by
+default, set in **Bearing tools → Settings**; `FitClearance` shows it). The bearing
 stays attached: move or resize the part and it follows. `Invert` flips it to the other
 side of the edge and `Offset` moves it along the axis.
 
@@ -183,7 +185,8 @@ see-through view of races, balls and cage.
 </p>
 
 - **Catalog size** fills in ID, OD and height from a standard bearing (608, 625, 6204, …).
-  With a selected edge, only sizes that fit it are listed.
+  With a selected edge, only sizes that fit it are listed, allowing the same clearance as
+  standard bearings (a 22.2 mm hole still lists the 608).
 - **Ball preset**: balls you can buy, from 3 mm and 1/8" up to 6 mm airsoft BBs (5.95 mm)
   and 1/4".
 - A red **status line** says what doesn't fit, such as too many balls for the pitch
