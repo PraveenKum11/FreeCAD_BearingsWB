@@ -18,6 +18,9 @@ Tested with FreeCAD 1.1. Inspired by
   NU / NJ, 302 / 303 / 320, HK and NK, and AXK thrust needle assemblies.
 - **Linear bushings**: LM8UU and friends, long, round-flanged and square-flanged.
 - **Find bearing**: search by name, bore, outside diameter or height.
+- **Supplier catalog coverage**: all 335 articles in the Tashev-Galving snapshot
+  of 2026-10-18, including mounted units, spherical rollers, cam followers and wheel-kit
+  bearing components. Search by supplier article number as well as designation.
 - **3D-printable bearings**: races, a snap-in cage and balls as separate PartDesign
   bodies, with a live preview while you set them up.
 - **Bearing BOM**: every bearing in the document with its quantity, saved as CSV.
@@ -115,6 +118,14 @@ looks like Standard.
 <p align="center">
   <img src="images/more-types.png" width="760" alt="2205, NU2205, NJ2205, 30205, HK2520 and AXK2542 cut away">
 </p>
+
+## Supplier catalog
+
+See [Supplier catalog coverage](docs/Supplier-catalog.md) for the additional series,
+mounted-unit dimensions, automotive kit components, source conflicts and the coverage
+audit. Loose-ball products are available in their own menu; the complete-set insertion
+button preserves kit and assortment quantities. Internal geometry remains representative;
+separate kit hardware and the ball assortment's storage box are excluded.
 
 ## Linear bushings
 

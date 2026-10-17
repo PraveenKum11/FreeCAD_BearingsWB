@@ -606,7 +606,11 @@ class TaperedInternals:
 def make_tapered(row, detail):
     T, B, C = row.B, row.cone_B, row.cup_C
     if detail == "Envelope":
-        return [(_annulus(row.d / 2, row.D / 2, -T, 0), COLOR_STEEL)]
+        shape = _annulus(row.d / 2, row.D / 2, -T, 0)
+        if B > T:  # some inch tapers have a cone projecting beyond the cup
+            ins = TaperedInternals(row)
+            shape = shape.fuse(_annulus(row.d / 2, ins.cone_r(B - T), 0, B - T))
+        return [(shape, COLOR_STEEL)]
     ins = TaperedInternals(row)
     cup = revolve(
         [
@@ -766,9 +770,17 @@ _INTERNALS = {
 
 def internals(row):
     """Internals of any row: ball, roller and needle bearings and linear bushings."""
+    if getattr(row, "kind", None) == "looseball":
+        from types import SimpleNamespace
+
+        return SimpleNamespace(dm=0, Dw=row.D, Z=1)
     if getattr(row, "is_thrust", False):
         return ThrustInternals(row)
     kind = getattr(row, "kind", None)
+    if kind in ("spherical", "doublecylindrical", "doubleangular", "housed", "camfollower"):
+        import BearingCatalogGeometry
+
+        return BearingCatalogGeometry.internals(row)
     if kind in _INTERNALS:
         return _INTERNALS[kind](row)
     return (
@@ -877,10 +889,18 @@ def build(row, closure, flanged, detail, flange_shape="Round", variant=None):
     flanged = bool(flanged and row.has_flange)
     linear = getattr(row, "is_linear", False)
     kind = getattr(row, "kind", None)
+    if getattr(row, "fixed_name", False):
+        closure = row.fixed_closure
     key = (row.name, row.d, row.D, row.B, row.B_shielded, row.D1, row.C1, closure, flanged, detail)
-    key += (flange_shape, variant)
+    key += (flange_shape, variant, kind, repr(getattr(row, "parameters", None)))
     if key not in _shape_cache:
-        if kind == "selfaligning":
+        if kind == "looseball":
+            parts = [(Part.makeSphere(row.D / 2, V(0, 0, -row.D / 2)), COLOR_BALL)]
+        elif kind in ("spherical", "doublecylindrical", "doubleangular", "housed", "camfollower"):
+            import BearingCatalogGeometry
+
+            parts = BearingCatalogGeometry.BUILDERS[kind](row, detail)
+        elif kind == "selfaligning":
             parts = make_selfaligning(row, detail)
         elif kind == "cylindrical":
             parts = make_cylindrical(row, variant, detail)
@@ -898,6 +918,12 @@ def build(row, closure, flanged, detail, flange_shape="Round", variant=None):
             parts = make_deep_groove(
                 row, closure, flanged, detail, angular=getattr(row, "is_angular", False)
             )
+        if getattr(row, "taper", None):
+            # K designations have a 1:12 diameter taper, small end at z=0.
+            bore = Part.makeCone(
+                row.d / 2 + row.B / (2 * row.taper), row.d / 2, row.B, V(0, 0, -row.B)
+            )
+            parts = [(shape.cut(bore), color) for shape, color in parts]
         if len(parts) == 1:
             shape = parts[0][0]
         else:
