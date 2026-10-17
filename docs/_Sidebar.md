@@ -7,6 +7,7 @@
 **Parts**
 - [[Standard bearings]]
 - [[Bearing types]]
+- [[Supplier catalog|Supplier-catalog]]
 - [[Linear bushings]]
 
 **Tools**

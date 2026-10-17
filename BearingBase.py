@@ -123,6 +123,7 @@ class BearingObject:
         )
         obj.setEditorMode("FullDesignation", 1)
         self._add_fit_clearance(obj)
+        self._add_catalog_info(obj)
 
         if attach_to:
             obj.BaseObject = attach_to
@@ -130,6 +131,17 @@ class BearingObject:
             if frame:
                 obj.MatchTo = match_kind(series, frame)
         self._update_editor_modes(obj)
+
+    @staticmethod
+    def _add_catalog_info(obj):
+        for name, tip in (
+            ("SourceURL", "Published dimension source"),
+            ("ModelNotes", "Dimension qualifications and model approximations"),
+            ("SupplierArticle", "Supplier article used to select this bearing"),
+        ):
+            if not hasattr(obj, name):
+                obj.addProperty("App::PropertyString", name, INFO, tip)
+            obj.setEditorMode(name, 1)
 
     @staticmethod
     def _add_fit_clearance(obj):
@@ -189,7 +201,10 @@ class BearingObject:
         if hasattr(obj, "FlangeShape"):
             obj.setEditorMode("FlangeShape", 0 if linear else 2)
         if hasattr(obj, "PitchDiameter"):
-            obj.setEditorMode("PitchDiameter", 2 if linear else 1)
+            obj.setEditorMode("PitchDiameter", 2 if linear or kind == "looseball" else 1)
+        for prop in ("BoreDiameter", "FitClearance"):
+            if hasattr(obj, prop):
+                obj.setEditorMode(prop, 2 if kind == "looseball" else 1)
 
     @staticmethod
     def _designation_list(series):
@@ -205,6 +220,9 @@ class BearingObject:
             self._update_editor_modes(obj)
 
     def onDocumentRestored(self, obj):
+        current_series = obj.Series
+        obj.Series = list(BD.SERIES)
+        obj.Series = current_series
         # documents from before linear bushings / v0.4 have no FlangeShape / Variant
         if not hasattr(obj, "FlangeShape"):
             self._add_flange_shape(obj)
@@ -212,6 +230,7 @@ class BearingObject:
             self._add_variant(obj)
         if not hasattr(obj, "FitClearance"):
             self._add_fit_clearance(obj)
+        self._add_catalog_info(obj)
         if getattr(self, "owner", None) is None:  # documents from before copy detection
             self.owner = obj.Name
         self._update_editor_modes(obj)
@@ -263,6 +282,22 @@ class BearingObject:
         obj.BallDiameter = ins.Dw
         obj.BallCount = ins.Z
         obj.FullDesignation = BD.full_designation(row, obj.Closure, flanged, flange_shape, variant)
+        notes = getattr(row, "notes", "")
+        if getattr(obj, "SupplierArticle", ""):
+            import BearingCatalog
+
+            products = BearingCatalog.lookup(obj.SupplierArticle)
+            targets = {t for p in products for t in BearingCatalog.components(p)}
+            if (obj.Series, row.name, obj.Closure) in targets:
+                notes = "\n".join([notes] + [p["Notes"] for p in products if p["Notes"]]).strip()
+            else:
+                obj.SupplierArticle = ""
+        if hasattr(obj, "SourceURL"):
+            obj.SourceURL = getattr(row, "source", "")
+            if not obj.SourceURL and getattr(obj, "SupplierArticle", ""):
+                obj.SourceURL = products[0]["URL"]
+        if hasattr(obj, "ModelNotes"):
+            obj.ModelNotes = notes
         if hasattr(obj, "FitClearance"):
             obj.FitClearance = BD.fit_clearance(row, frame[2], obj.MatchTo) if frame else 0.0
         self._update_label(obj)
@@ -276,6 +311,9 @@ class BearingObject:
             elif flanged and obj.MatchTo == "Housing":
                 # in a hole the flange rests on the face and only the body goes in
                 offset += row.C1
+            elif BD.kind(row) == "camfollower" and obj.MatchTo == "Housing":
+                # Stud enters the selected hole; its shoulder rests on the face.
+                offset += row.B - row.stud_length
             placement = FreeCAD.Placement(
                 center + normal * offset, FreeCAD.Rotation(V(0, 0, 1), normal)
             )
