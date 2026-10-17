@@ -8,6 +8,7 @@ Safe mode is supported: register this checkout's workbench if it is not installe
 import os
 import sys
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 import FreeCAD as App
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "tests" / "gui")]
 
 import BearingBase
+import BearingCatalog as BC
 import BearingData as BD
 from guikit import finish, log, log_exc, pump, shot
 
@@ -74,6 +76,25 @@ try:
     pump(0.2)
     assert len(panel.results) == 11 and panel.insert_btn.isEnabled()
     assert panel.product_btn.isEnabled() and "450 parts" in panel.product_btn.text()
+    for product in BC.products():
+        article = product["SKU"]
+        expected = BC.components(product)
+        panel.name.setText(article)
+        pump(0.01)
+        assert panel.results and panel.insert_btn.isEnabled(), article
+        button = panel.product_btn if len(expected) > 1 else panel.insert_btn
+        assert button.isEnabled(), article
+        button.click()
+        created = Gui.Selection.getSelection()
+        assert Counter((o.Series, str(o.Designation), str(o.Closure)) for o in created) == Counter(
+            expected
+        ), article
+        assert all(o.Shape.isValid() and o.SupplierArticle == article for o in created), article
+        Gui.Selection.clearSelection()
+        for obj in created:
+            doc.removeObject(obj.Name)
+        log("ok article GUI insertion", article, len(expected))
+    log("ok all supplier articles inserted through GUI", len(BC.products()))
     Gui.Control.closeDialog()
     for obj in doc.Objects:
         obj.Visibility = False

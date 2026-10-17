@@ -133,6 +133,16 @@ product names or overwrite tables. The snapshot records component mappings as
 `test_catalog_geometry` verifies every added size at all detail levels, mounting-hole
 clearance, bore clearance, non-overlapping components, real tapered bores/studs, and
 document/BOM round trips. The general geometry suite also exercises the new annular
-bearing rows with the existing families. `tests/gui/catalog_smoke.py` invokes every
-series' menu command, verifies valid geometry, and tests supplier search, closures,
-complete-kit insertion and the loose-ball assortment's choices and quantities.
+bearing rows with the existing families.
+
+`test_catalog_articles` creates every supplier article through the public insertion
+API, including all repeated kit/set components. It recomputes the actual objects at
+all three detail levels, checks valid solids and boundary dimensions, verifies BOM
+quantities, then saves, reopens and forcibly recomputes each document. Set
+`BEARINGS_CATALOG_OUTPUT` to an output directory to retain one `.FCStd` file per
+article and `validation.json` with a separate pass/fail result for every article.
+Otherwise the test uses temporary files.
+
+`tests/gui/catalog_smoke.py` invokes every series' menu command and then inserts
+**every supplier article through the GUI buttons**, verifying shapes, supplier
+metadata and component quantities, including the complete 450-ball assortment.
