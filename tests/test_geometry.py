@@ -148,3 +148,37 @@ class AllShapes(unittest.TestCase):
                 self.assertLess(
                     worst, 1e-4 * ball_vol, "parts overlap, worst common volume %.2e" % worst
                 )
+
+    def test_no_shared_faces(self):
+        """Separate parts touch at most at a point or line (balls on raceways): coincident
+        faces flicker in section views, so shields, seals, retainers and cage segments
+        keep CONTACT_GAP from their neighbours."""
+        for series, name, closure, flanged, shape in (
+            ("60", "608", "ZZ", False, "Round"),
+            ("60", "608", "2RS", False, "Round"),
+            ("68", "688", "Z", True, "Round"),
+            ("MR", "MR105", "RS", False, "Round"),
+            ("R", "R188", "2RS", False, "Round"),
+            ("69", "6920", "ZZ", False, "Round"),
+            ("72", "7204", "Open", False, "Round"),
+            ("511", "51104", "Open", False, "Round"),
+            ("LM", "LM8UU", "Open", False, "Round"),
+            ("LM", "LM8UU", "Open", True, "Square"),
+            ("LM", "LM20LUU", "Open", False, "Round"),
+        ):
+            with self.subTest(bearing=name, closure=closure, flanged=flanged):
+                row = BD.get_row(series, name)
+                solids = BG.build(row, closure, flanged, "Detailed", shape)[0].Solids
+                shared = 0.0
+                for i in range(len(solids)):
+                    for j in range(i + 1, len(solids)):
+                        a, b = solids[i], solids[j]
+                        if not a.BoundBox.intersect(b.BoundBox) or a.distToShape(b)[0] > 1e-7:
+                            continue
+                        shared += sum(
+                            fa.common(fb).Area
+                            for fa in a.Faces
+                            for fb in b.Faces
+                            if fa.BoundBox.intersect(fb.BoundBox)
+                        )
+                self.assertLess(shared, 1e-6, "parts share %.3f mm² of faces" % shared)

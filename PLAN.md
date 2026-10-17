@@ -130,6 +130,7 @@ sizes, ball size and count). Properties that don't apply to a family are hidden.
 - [x] **v1.0.0** First public release
   - [x] Wiki in `docs/`, published by GitHub Actions; draft for wiki.freecad.org.
 - [x] **v1.1.0** Fit allowance and Settings dialog, BOM spreadsheet (see CHANGELOG.md).
+- [x] **v1.1.1** No coincident faces between parts (section-view flicker).
 
 Releases: bump `<version>` and `<date>` in `package.xml`, add a CHANGELOG.md entry, tag
 `vX.Y.Z` and publish a GitHub release with that entry as its notes.

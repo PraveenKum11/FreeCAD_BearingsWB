@@ -88,6 +88,11 @@ COLOR_SHIELD = (0.60, 0.61, 0.64)
 COLOR_SEAL = (0.12, 0.12, 0.12)
 COLOR_RETAINER = (0.22, 0.23, 0.26)  # plastic ball retainer of a linear bushing
 
+# Gap left between parts that would otherwise share a face (a shield in its seat, a seal
+# against the sleeve, neighbouring cage segments). Coincident faces of separate solids
+# flicker in section and clipping views; 0.01 mm is invisible but keeps them apart.
+CONTACT_GAP = 0.01
+
 
 class Internals:
     """Computed internal geometry of a deep groove ball bearing."""
@@ -124,6 +129,14 @@ def _closure_sides(closure):
     if closure in ("ZZ", "2RS"):
         return True, True
     return False, False
+
+
+def _cage_segment(face, x0, n):
+    """One of n cage segments: the profile face revolved over its pitch, centred on the
+    x axis, a CONTACT_GAP short of its neighbours at the inner radius x0."""
+    gap = math.degrees(CONTACT_GAP / x0)
+    face.rotate(V(0, 0, 0), V(0, 0, 1), -180.0 / n + gap / 2)
+    return Part.Solid(face.revolve(V(0, 0, 0), V(0, 0, 1), 360.0 / n - gap))
 
 
 def _xz(x, z):
@@ -292,10 +305,12 @@ def make_deep_groove(row, closure, flanged, detail, angular=False):
         seal = closure in ("RS", "2RS")
         x_in = xs + (0.02 if seal else 0.15) * (xl - xs)
         color = COLOR_SEAL if seal else COLOR_SHIELD
+        # clear of the seat's wall and shoulder in the outer ring
+        x_out, t = xl + rec - CONTACT_GAP, t - CONTACT_GAP
         if top:
-            parts.append((_annulus(x_in, xl + rec, -inset - t, -inset), color))
+            parts.append((_annulus(x_in, x_out, -inset - t, -inset), color))
         if bottom:
-            parts.append((_annulus(x_in, xl + rec, -B + inset, -B + inset + t), color))
+            parts.append((_annulus(x_in, x_out, -B + inset, -B + inset + t), color))
 
     # ribbon cage with spherical pockets: cut one pocket from one pitch segment and
     # pattern it (about 8x faster than cutting all pockets from a full ring)
@@ -310,8 +325,7 @@ def make_deep_groove(row, closure, flanged, detail, angular=False):
                 ("p", x0, zc + wc / 2, 0),
             ]
         )
-        face.rotate(V(0, 0, 0), V(0, 0, 1), -180.0 / ins.Z)
-        segment = Part.Solid(face.revolve(V(0, 0, 0), V(0, 0, 1), 360.0 / ins.Z))
+        segment = _cage_segment(face, x0, ins.Z)
         segment = segment.cut(Part.makeSphere(0.52 * Dw, V(dm / 2, 0, zc)))
         for k in range(ins.Z):
             for s in segment.Solids:
@@ -409,8 +423,7 @@ def make_thrust(row, detail):
                 ("p", x0, zc + tc / 2, 0),
             ]
         )
-        face.rotate(V(0, 0, 0), V(0, 0, 1), -180.0 / ins.Z)
-        segment = Part.Solid(face.revolve(V(0, 0, 0), V(0, 0, 1), 360.0 / ins.Z))
+        segment = _cage_segment(face, x0, ins.Z)
         segment = segment.cut(Part.makeSphere(0.52 * Dw, V(dm / 2, 0, zc)))
         for k in range(ins.Z):
             for s_ in segment.Solids:
@@ -812,8 +825,8 @@ def _linear_sleeve(row, flanged, shape, bore):
 def _retainer(row, ins):
     """Plastic retainer between the seals: a tube from just off the shaft to the sleeve,
     with a slot along each ball row."""
-    L, t = row.B, ins.seal
-    tube = _annulus(ins.retainer_bore, ins.sleeve_bore, -L + t, -t)
+    L, t, g = row.B, ins.seal, CONTACT_GAP
+    tube = _annulus(ins.retainer_bore, ins.sleeve_bore - g, -L + t + g, -t - g)
     w, length = ins.slot_width, ins.row_length
     slots = []
     for k in range(ins.rows):
@@ -834,8 +847,10 @@ def make_linear(row, flanged, shape, detail):
     ins = LinearInternals(row)
     L, t = row.B, ins.seal
     parts = [(_linear_sleeve(row, flanged, shape, ins.sleeve_bore), COLOR_STEEL)]
+    # seals and retainer just clear of the sleeve and of each other (CONTACT_GAP)
+    seal_od = ins.sleeve_bore - CONTACT_GAP
     for z0 in (-L, -t):
-        parts.append((_annulus(row.d / 2, ins.sleeve_bore, z0, z0 + t), COLOR_SEAL))
+        parts.append((_annulus(row.d / 2, seal_od, z0, z0 + t), COLOR_SEAL))
     parts.append((_retainer(row, ins), COLOR_RETAINER))
     if detail != "Detailed":
         return parts

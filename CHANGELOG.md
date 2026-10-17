@@ -4,6 +4,15 @@ All notable changes to the Bearings workbench. Versions follow
 [semantic versioning](https://semver.org/): a minor version adds features, a patch
 version fixes bugs, a major version may break existing documents or scripts.
 
+## 1.1.1 (2026-10-17)
+
+### Fixed
+
+- No more flickering stripes inside bearings in section and clipping views. Shields and
+  seals of deep groove bearings, the seals and ball retainer of linear bushings, and
+  neighbouring cage segments shared faces with each other; they now keep a 0.01 mm gap.
+  Outer dimensions and placement are unchanged.
+
 ## 1.1.0 (2026-10-17)
 
 ### Added
