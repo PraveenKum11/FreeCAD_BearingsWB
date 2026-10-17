@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
   <name>Bearings</name>
-  <description>Parametric rolling bearings (deep groove, miniature, flanged) with edge snapping.</description>
-  <version>1.0.0</version>
-  <date>2026-10-14</date>
+  <description>Parametric rolling bearings and linear bushings that snap to holes and shafts, 3D-printable bearings and a bearing BOM.</description>
+  <version>1.1.0</version>
+  <date>2026-10-17</date>
   <maintainer email="praveen.kumar@rtcamp.com">Praveen Kumar</maintainer>
   <license file="LICENSE">GPL-3.0-or-later</license>
   <icon>Icons/BearingsWB.svg</icon>

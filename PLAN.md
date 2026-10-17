@@ -127,8 +127,12 @@ sizes, ball size and count). Properties that don't apply to a family are hidden.
 - [x] **v0.2** Printable bearing, Find bearing, LM linear bushings, inch R series.
 - [x] **v0.3** Thrust 511, angular contact 72 / 73, Bearing BOM.
 - [x] **v0.4** Self-aligning, cylindrical NU / NJ, tapered, needle HK / NK, AXK; toolbar per family.
-- [ ] **v0.5** Release
+- [x] **v1.0.0** First public release
   - [x] Wiki in `docs/`, published by GitHub Actions; draft for wiki.freecad.org.
+- [x] **v1.1.0** Fit allowance and Settings dialog, BOM spreadsheet (see CHANGELOG.md).
+
+Releases: bump `<version>` and `<date>` in `package.xml`, add a CHANGELOG.md entry, tag
+`vX.Y.Z` and publish a GitHub release with that entry as its notes.
 
 ## 10. Risks and open questions
 
