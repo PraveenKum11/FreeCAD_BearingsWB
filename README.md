@@ -8,6 +8,8 @@ design a fully parametric **3D-printable bearing** with races, a snap-in cage an
   <img src="images/hero.png" width="860" alt="Standard bearings 6204-2RS, 608ZZ, F688ZZ and MR105 cut away, next to a printable 608">
 </p>
 
+https://github.com/user-attachments/assets/a84dfc59-cc6d-4e6a-b567-e3206875ef82
+
 Tested with FreeCAD 1.1. Inspired by
 [FreeCAD_FastenersWB](https://github.com/shaise/FreeCAD_FastenersWB).
 
