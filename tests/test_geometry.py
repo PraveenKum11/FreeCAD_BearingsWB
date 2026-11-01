@@ -22,7 +22,7 @@ class Internals(unittest.TestCase):
 
 
 # families whose Detailed level adds a cage (the others: Detailed is Standard)
-WITH_CAGE = ("deepgroove", "angular", "thrust")
+WITH_CAGE = ("deepgroove", "angular", "thrust", "doubleangular")
 
 
 def expected_solids(row, closure, detail, variant=None):
@@ -30,8 +30,10 @@ def expected_solids(row, closure, detail, variant=None):
         return 1
     kind = BD.kind(row)
     z = BG.internals(row).Z if kind not in ("deepgroove", "angular") else 0
-    if kind in ("selfaligning", "cylindrical", "tapered"):
+    if kind in ("selfaligning", "cylindrical", "tapered", "spherical", "doublecylindrical"):
         return 2 + z  # inner and outer ring, rolling elements
+    if kind == "doubleangular":
+        return 5 + z  # split inner ring, joined outer ring, two seals and two ball rows
     if kind == "needle":
         return 1 + z  # the cup / ring and the needles
     if kind == "axk":
@@ -63,9 +65,10 @@ class AllShapes(unittest.TestCase):
             close(bb.XLength, od, 0.01) and close(bb.YLength, od, 0.01),
             "diameter %.3f != %.3f" % (bb.XLength, od),
         )
+        top = max(0, getattr(row, "cone_B", 0) - B)
         self.assertTrue(
-            close(bb.ZMax, 0, 0.01) and close(bb.ZMin, -B, 0.01),
-            "z range [%.3f, %.3f] != [-%g, 0]" % (bb.ZMin, bb.ZMax, B),
+            close(bb.ZMax, top, 0.01) and close(bb.ZMin, -B, 0.01),
+            "z range [%.3f, %.3f] != [-%g, %g]" % (bb.ZMin, bb.ZMax, B, top),
         )
         probes = [
             V(row.d / 2 * 0.99, 0, -B / 2),
@@ -86,6 +89,10 @@ class AllShapes(unittest.TestCase):
 
     def test_all_shapes(self):
         for series in BD.SERIES:
+            # These are non-annular mounting parts, with dedicated footprint, stud
+            # and bolt-hole checks at every size/detail in test_catalog_geometry.
+            if BD.family(series) in ("housed", "camfollower", "looseball"):
+                continue
             rows = BD.load_table(series)
             sample = {rows[0].name, rows[len(rows) // 2].name, rows[-1].name}
             linear = BD.family(series) == "linear"

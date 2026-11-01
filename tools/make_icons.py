@@ -188,7 +188,8 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     for series in BD.SERIES:
         fill = INCH if is_inch(series) else METRIC
-        write(f"Bearing_{series}.svg", drawing(quarter_cut(bearing(series)), fill) + badge(series))
+        label = {"Special": "Sp", "Wheel": "WH", "Ball": "B"}.get(series, series)
+        write(f"Bearing_{series}.svg", drawing(quarter_cut(bearing(series)), fill) + badge(label))
         print("make_icons:", series, flush=True)
 
     ball = drawing(quarter_cut(bearing("62")), METRIC)

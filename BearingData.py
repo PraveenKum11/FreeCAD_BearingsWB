@@ -12,6 +12,7 @@ alike.
 """
 
 import csv
+import json
 import os
 import re
 
@@ -54,6 +55,38 @@ SERIES = {
     "HK": ("Drawn cup needle roller bearing, HK", "needle.csv", "HK0810", "needle"),
     "NK": ("Needle roller bearing, NK", "needle.csv", "NK10/16", "needle"),
     "LM": ("Linear ball bushing, LM", "linear_lm.csv", "LM8UU", "linear"),
+    "160": (
+        "Extra-light deep groove ball bearing, 160",
+        "catalog_extra.csv",
+        "16004",
+        "deepgroove",
+    ),
+    "161": (
+        "Special-width deep groove ball bearing, 161",
+        "catalog_extra.csv",
+        "16100",
+        "deepgroove",
+    ),
+    "64": ("Deep groove ball bearing, series 64", "catalog_extra.csv", "6403", "deepgroove"),
+    "6300": ("Wide deep groove ball bearing, 6300", "catalog_extra.csv", "63001", "deepgroove"),
+    "512": ("Thrust ball bearing, series 512", "catalog_extra.csv", "51205", "thrust"),
+    "322": ("Tapered roller bearing, series 322", "catalog_extra.csv", "32205", "tapered"),
+    "222": ("Spherical roller bearing, series 222", "catalog_extra.csv", "22218", "spherical"),
+    "230": ("Spherical roller bearing, series 230", "catalog_extra.csv", "23030", "spherical"),
+    "NN30": (
+        "Double-row cylindrical roller bearing, NN30 K",
+        "catalog_extra.csv",
+        "NN3015K",
+        "doublecylindrical",
+    ),
+    "Special": ("Special and automotive bearing sizes", "catalog_extra.csv", "92705", "special"),
+    "Wheel": ("Wheel bearing kit components, VKBA / VKHB", "catalog_extra.csv", "VKBA577", "wheel"),
+    "UCP": ("Pillow block bearing unit, UCP", "housed.csv", "UCP205", "housed"),
+    "UCF": ("Square flange bearing unit, UCF", "housed.csv", "UCF205", "housed"),
+    "UCFL": ("Two-bolt flange bearing unit, UCFL", "housed.csv", "UCFL205", "housed"),
+    "SBLF": ("Compact two-bolt flange bearing unit, SBLF", "housed.csv", "SBLF205", "housed"),
+    "KR": ("Stud type cam follower, KR", "catalog_extra.csv", "KR19PP", "camfollower"),
+    "Ball": ("Loose bearing balls", "catalog_extra.csv", "Ball6mm", "looseball"),
 }
 
 # Series whose rows come from another series' table (ISO 15 shares boundary dimensions
@@ -81,6 +114,13 @@ NO_CLOSURES = (
     "tapered",
     "needle",
     "axk",
+    "spherical",
+    "doublecylindrical",
+    "housed",
+    "camfollower",
+    "special",
+    "wheel",
+    "looseball",
 )
 
 # Family-specific variants (the Variant property): inner ring ribs of a cylindrical roller
@@ -211,6 +251,31 @@ class LinearRow:
         return "LinearRow(%s %gx%gx%g)" % (self.name, self.d, self.D, self.B)
 
 
+class CatalogRow(BearingRow):
+    """Additional sourced sizes, including non-annular mounted units.
+
+    Extra fields are geometry parameters in mm. For housed units D is the insert OD,
+    B is the complete axial depth; L/H describe the housing footprint. A cam follower's
+    d is its stud diameter, not a bore. Sources and qualifications live with each row.
+    """
+
+    def __init__(self, rec):
+        super().__init__(rec["Designation"], *[float(rec[k]) for k in ("d", "D", "B", "r")])
+        self.kind = rec["Kind"]
+        self.is_angular = self.kind == "angular"
+        self.is_thrust = self.kind == "thrust"
+        self.fixed_name = rec["Series"] in ("Special", "Wheel", "NN30", "KR", "Ball")
+        self.source = rec["Source"]
+        self.notes = rec["Notes"]
+        self.parameters = json.loads(rec["Parameters"] or "{}")
+        for key, value in self.parameters.items():
+            setattr(self, key, value)
+        self.fixed_closure = self.parameters.get("closure", "Open")
+
+    def width(self, closure=None):
+        return self.B
+
+
 def kind(row):
     """The family of a row: deepgroove, angular, thrust, linear, selfaligning, ..."""
     if getattr(row, "is_linear", False):
@@ -239,7 +304,7 @@ def _num(text):
 
 
 def _read_csv(fname):
-    with open(fname, newline="") as f:
+    with open(fname, newline="", encoding="utf-8") as f:
         lines = [ln for ln in f if ln.strip() and not ln.lstrip().startswith("#")]
     reader = csv.reader(lines)
     header = next(reader)
@@ -336,7 +401,9 @@ def load_table(series):
         return _tables[series]
     records = _read_csv(os.path.join(dataPath, SERIES[series][1]))
     fam = family(series)
-    if series in DERIVED:
+    if SERIES[series][1] in ("catalog_extra.csv", "housed.csv"):
+        rows = [CatalogRow(rec) for rec in records if rec["Series"] == series]
+    elif series in DERIVED:
         rows = _derived_rows(series, records)
     elif fam == "selfaligning":  # series 22: the whole table
         rows = [SelfAligningRow(*_bearing_args(rec)) for rec in records]
@@ -373,6 +440,8 @@ def full_designation(row, closure, flanged, flange_shape="Round", variant=None):
     LMF8UU, LMK8LUU. Families without closures get no closure code."""
     name = row.name
     k = kind(row)
+    if getattr(row, "fixed_name", False):
+        return name
     if k == "cylindrical" and variant == "NJ":
         return "NJ" + name[2:]
     if k == "angular":
@@ -403,13 +472,15 @@ def fit_allowance():
 
 
 def _fit_key(match_to):
-    return (lambda r: r.d) if match_to == "Shaft" else (lambda r: r.D)
+    return lambda r: r.d if match_to == "Shaft" or kind(r) == "camfollower" else r.D
 
 
 def fit_clearance(row, diameter, match_to):
     """Clearance between the edge and the bearing in mm: hole minus OD (Housing) or bore
     minus shaft (Shaft). Negative means the bearing is too big for the hole or too small
     for the shaft."""
+    if kind(row) == "camfollower":
+        return diameter - row.d
     if match_to == "Shaft":
         return row.d - diameter
     return diameter - row.D
@@ -428,6 +499,12 @@ def auto_match(series, diameter, match_to, allowance=None):
     than the shaft, or an OD ('Housing') up to `allowance` mm smaller than the hole. The
     closest fit wins (the narrowest of equals); None if the series has no such size.
     allowance defaults to the FitAllowance preference."""
+    if family(series) == "looseball":
+        return None  # a loose rolling element has no shaft or housing fit
+    if (family(series) == "housed" and match_to == "Housing") or (
+        family(series) == "camfollower" and match_to == "Shaft"
+    ):
+        return None  # these parts mount only on a shaft / in a stud hole, respectively
     if allowance is None:
         allowance = fit_allowance()
 
@@ -474,6 +551,10 @@ class NoFitError(ValueError):
 
 def best_match_kind(series, diameter):
     """Guess whether a circle of this diameter is a shaft (bore match) or a hole (OD match)."""
+    if family(series) == "camfollower":
+        return "Housing"
+    if family(series) == "housed":
+        return "Shaft"
     rows = load_table(series)
     db = min(abs(r.d - diameter) for r in rows)
     dD = min(abs(r.D - diameter) for r in rows)
@@ -486,7 +567,7 @@ _SIZE_RE = re.compile(
     r"^\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)(?:\s*[x×*]\s*(\d+(?:\.\d+)?))?\s*$", re.I
 )
 # closure codes at the end: 2RS / RS (SKF adds a digit: 2RS1), 2Z / ZZ / Z
-_CLOSURE_RE = re.compile(r"-?(?:(2RS|RS)\d?|(2Z|ZZ|Z))$", re.I)
+_CLOSURE_RE = re.compile(r"-?(?:(2RS|RS)(?:\d|H|L)?|(2Z|ZZ|Z))$", re.I)
 _CLOSURE_CODES = {"2RS": "2RS", "RS": "RS", "2Z": "ZZ", "ZZ": "ZZ", "Z": "Z"}
 _SKF_MINI_RE = re.compile(r"^6(1[89])/(\d)$")  # SKF 618/8 = 688, 619/5 = 695
 _LINEAR_FLANGE_RE = re.compile(r"^LM([FK])(\d.*)$")  # LMF8UU, LMK8LUU
@@ -503,6 +584,18 @@ def parse_designation(text):
     "LMF8LUU" -> ("LM8LUU", None, "Round"); `flanged` is then the flange shape.
     """
     t = text.strip().upper().replace(" ", "")
+    # Exact catalog names include slash-separated inch tapers and wheel-kit components.
+    if any(r.name.upper() == t for s in ("Special", "Wheel", "NN30", "KR") for r in load_table(s)):
+        return t, None, False
+    t = re.sub(r"/?(?:C[2345]|SBB)$", "", t)
+    if t == "166ZZ":
+        t = "R166ZZ"
+    if t.startswith("NN3015"):
+        return "NN3015K", None, False
+    if t.startswith("NN3017"):
+        return "NN3017K", None, False
+    if t.startswith("1306K"):
+        return "1306K", None, False
     m = _ANGULAR_RE.match(t) or _TAPERED_RE.match(t)
     if m:
         return m.group(1), None, False
@@ -532,6 +625,7 @@ def parse_designation(text):
     m = _SKF_MINI_RE.match(t)
     if m:
         t = "6" + ("8" if m.group(1) == "18" else "9") + m.group(2)
+    t = re.sub(r"^61([89])(\d\d)$", r"6\1\2", t)
     return t, closure, flanged
 
 
@@ -544,6 +638,15 @@ def search(name=None, d=None, D=None, B=None, tol=0.0):
     the shielded width. Results are sorted by bore, then OD, width and designation.
     """
     flanged = False
+    supplier_targets = None
+    if name:
+        import BearingCatalog
+
+        products = BearingCatalog.lookup(name)
+        if products:
+            supplier_targets = {
+                (s, n) for p in products for s, n, c in BearingCatalog.components(p)
+            }
     if name:
         size = _SIZE_RE.match(name)
         if size:
@@ -561,7 +664,9 @@ def search(name=None, d=None, D=None, B=None, tol=0.0):
     hits = []
     for series in SERIES:
         for r in load_table(series):
-            if name and not r.name.upper().startswith(name):
+            if supplier_targets is not None and (series, r.name) not in supplier_targets:
+                continue
+            if supplier_targets is None and name and not r.name.upper().startswith(name):
                 continue
             if flanged and not r.has_flange:
                 continue
@@ -577,3 +682,22 @@ def search(name=None, d=None, D=None, B=None, tol=0.0):
         (h for h in hits if h not in exact), key=lambda h: (h[1].d, h[1].D, h[1].B, h[1].name)
     )
     return exact + rest
+
+
+def search_options(text, series, row):
+    """Insertion options for a result, including supplier closures and NJ variants."""
+    import BearingCatalog
+
+    _, closure, flanged = parse_designation(text or "")
+    for s, name, c in sorted(BearingCatalog.targets(text)):
+        if (s, name) == (series, row.name):
+            closure = c
+            break
+    options = dict(
+        Closure=closure or "Open",
+        Flanged=bool(flanged),
+        FlangeShape=flanged if flanged in FLANGE_SHAPES else "Round",
+    )
+    if family(series) == "cylindrical" and (text or "").strip().upper().startswith("NJ"):
+        options["Variant"] = "NJ"
+    return options

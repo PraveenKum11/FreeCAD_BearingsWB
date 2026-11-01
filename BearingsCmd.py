@@ -35,6 +35,8 @@ class InsertBearingCommand:
         doc = FreeCAD.ActiveDocument
         doc.openTransaction("Add bearing")
         edges = [(obj, [sub]) for obj, sub in BRselection.selected_edges()]
+        if BD.family(self.series) == "looseball":
+            edges = []  # loose balls have no shaft/housing attachment
         created, skipped = [], []
         if edges:
             for target in edges:
@@ -136,14 +138,22 @@ class GroupCommand:
 
 # (command name, title, series): one drop-down per group
 GROUPS = [
-    ("Bearings_DeepGroove", "Deep groove ball bearings", ["60", "62", "63", "68", "69", "MR", "R"]),
+    (
+        "Bearings_DeepGroove",
+        "Deep groove ball bearings",
+        ["60", "62", "63", "68", "69", "MR", "R", "160", "161", "64", "6300"],
+    ),
     ("Bearings_AngularContact", "Angular contact ball bearings", ["72", "73"]),
     ("Bearings_SelfAligning", "Self-aligning ball bearings", ["12", "13", "22", "23"]),
-    ("Bearings_Cylindrical", "Cylindrical roller bearings", ["NU2", "NU3", "NU22", "NU23"]),
-    ("Bearings_Tapered", "Tapered roller bearings", ["302", "303", "320"]),
+    ("Bearings_Cylindrical", "Cylindrical roller bearings", ["NU2", "NU3", "NU22", "NU23", "NN30"]),
+    ("Bearings_Tapered", "Tapered roller bearings", ["302", "303", "320", "322"]),
+    ("Bearings_Spherical", "Spherical roller bearings", ["222", "230"]),
+    ("Bearings_Mounted", "Mounted bearing units", ["UCP", "UCF", "UCFL", "SBLF"]),
+    ("Bearings_Special", "Special, wheel and stud bearings", ["Special", "Wheel", "KR"]),
     ("Bearings_Needle", "Needle roller bearings", ["HK", "NK"]),
-    ("Bearings_Thrust", "Thrust bearings", ["511", "AXK"]),
+    ("Bearings_Thrust", "Thrust bearings", ["511", "512", "AXK"]),
     ("Bearings_Linear", "Linear bushings", ["LM"]),
+    ("Bearings_Balls", "Loose bearing balls", ["Ball"]),
 ]
 
 

@@ -20,7 +20,11 @@ class Tables(unittest.TestCase):
         for series in BD.SERIES:
             for r in BD.load_table(series):
                 with self.subTest(series=series, row=r.name):
-                    self.assertTrue(0 < r.d < r.D and r.B > 0, "bad boundary dims")
+                    if BD.kind(r) == "looseball":
+                        self.assertEqual(r.d, 0, "loose balls have no bore")
+                        self.assertTrue(r.D > 0 and r.B == r.D, "bad ball diameter")
+                    else:
+                        self.assertTrue(0 < r.d < r.D and r.B > 0, "bad boundary dims")
                     if r.has_flange:
                         self.assertTrue(r.D1 > r.D and r.C1 < r.B, "bad flange dims")
                     if r.B_shielded is not None:
