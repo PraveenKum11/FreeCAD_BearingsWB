@@ -11,7 +11,8 @@
 ![Find bearing listing every bearing with a 22 mm outside diameter](images/find-bearing.png)
 
 Flange and closure codes in the name (`F`, `MF`, `FR`, `LMF`, `LMK`, `ZZ`, `2RS`) are used
-when inserting.
+when inserting, and only sizes that come with them are listed (`MR105-2RS` finds nothing:
+NSK sells MR105 open and ZZ only).
 
 - **Insert bearing** adds the selected size (attached to the edges you selected before
   opening the panel, if any). Double-clicking a row does the same.

@@ -92,22 +92,65 @@ FLANGE_SHAPES = ["Round", "Square"]  # linear bushings: LMF / LMK
 
 CLOSURES = ["Open", "Z", "ZZ", "RS", "2RS"]
 CLOSURE_SUFFIX = {"Open": "", "Z": "Z", "ZZ": "ZZ", "RS": "-RS", "2RS": "-2RS"}
+# the closest closures to use instead when a size doesn't come with the one asked for
+CLOSURE_FALLBACK = {
+    "Open": ("Open", "ZZ", "Z", "2RS", "RS"),
+    "Z": ("Z", "ZZ", "Open", "RS", "2RS"),
+    "ZZ": ("ZZ", "Z", "2RS", "RS", "Open"),
+    "RS": ("RS", "2RS", "Z", "ZZ", "Open"),
+    "2RS": ("2RS", "RS", "ZZ", "Z", "Open"),
+}
 
 AUTO = "Auto"
 
 
 class BearingRow:
-    __slots__ = ("name", "d", "D", "B", "r", "B_shielded", "D1", "C1")
+    __slots__ = (
+        "name",
+        "d",
+        "D",
+        "B",
+        "r",
+        "B_shielded",
+        "r_shielded",
+        "D1",
+        "C1",
+        "D1_shielded",
+        "C1_shielded",
+        "closures",
+        "flanged_closures",
+    )
 
-    def __init__(self, name, d, D, B, r, B_shielded=None, D1=None, C1=None):
+    def __init__(
+        self,
+        name,
+        d,
+        D,
+        B,
+        r,
+        B_shielded=None,
+        D1=None,
+        C1=None,
+        D1_shielded=None,
+        C1_shielded=None,
+        r_shielded=None,
+        closures=None,
+        flanged_closures=None,
+    ):
         self.name = name
         self.d = d
         self.D = D
         self.B = B
         self.r = r
         self.B_shielded = B_shielded
+        self.r_shielded = r_shielded
         self.D1 = D1
         self.C1 = C1
+        self.D1_shielded = D1_shielded
+        self.C1_shielded = C1_shielded
+        # closures the size comes with, plain and flanged (None: all of CLOSURES)
+        self.closures = closures
+        self.flanged_closures = flanged_closures
 
     @property
     def has_flange(self):
@@ -118,6 +161,25 @@ class BearingRow:
         if closure != "Open" and self.B_shielded is not None:
             return self.B_shielded
         return self.B
+
+    def radius(self, closure):
+        """Minimum corner radius for the given closure (smaller on some shielded miniatures)."""
+        if closure != "Open" and self.r_shielded is not None:
+            return self.r_shielded
+        return self.r
+
+    def offers(self, closure=None, flanged=False):
+        """True if the table lists this size with the closure (None: any) and flange."""
+        if flanged and not self.has_flange:
+            return False
+        listed = self.flanged_closures if flanged else self.closures
+        return listed is None or closure is None or closure in listed
+
+    def flange(self, closure):
+        """(D1, C1) for the given closure (some shielded miniatures have a larger flange)."""
+        if closure != "Open" and self.D1_shielded is not None:
+            return self.D1_shielded, self.C1_shielded
+        return self.D1, self.C1
 
     def __repr__(self):
         return "BearingRow(%s %gx%gx%g)" % (self.name, self.d, self.D, self.B)
@@ -207,6 +269,12 @@ class LinearRow:
     def width(self, closure=None):
         return self.B
 
+    def flange(self, closure=None):
+        return self.D1, self.C1
+
+    def offers(self, closure=None, flanged=False):
+        return not flanged or self.has_flange
+
     def __repr__(self):
         return "LinearRow(%s %gx%gx%g)" % (self.name, self.d, self.D, self.B)
 
@@ -261,7 +329,23 @@ def _bearing_row(rec):
         _num(rec.get("B_shielded", "")),
         _num(rec.get("D1", "")),
         _num(rec.get("C1", "")),
+        _num(rec.get("D1_shielded", "")),
+        _num(rec.get("C1_shielded", "")),
+        _num(rec.get("r_shielded", "")),
+        _closures(rec.get("closures")),
+        _closures(rec.get("flanged_closures")),
     )
+
+
+def _closures(text):
+    """A closures column ("Open ZZ") as a tuple; None if the table has no such column."""
+    if text is None:
+        return None
+    names = tuple(text.split())
+    bad = [c for c in names if c not in CLOSURES]
+    if bad:
+        raise ValueError("unknown closure(s) %s" % ", ".join(bad))
+    return names
 
 
 def _linear_row(rec):
@@ -386,6 +470,26 @@ def full_designation(row, closure, flanged, flange_shape="Round", variant=None):
     if flanged and row.has_flange:
         name = "MF" + name[2:] if name.startswith("MR") else "F" + name
     return name + CLOSURE_SUFFIX.get(closure, "")
+
+
+def resolve(row, closure, flanged):
+    """(closure, flanged) to build: the ones asked for if the table lists them, else the
+    nearest it does. The flange goes before the closure changes (MF41XZZ -> MR41XZZ)."""
+    flanged = bool(flanged)
+    if kind(row) in NO_CLOSURES:
+        return closure, flanged and row.has_flange
+    for c in CLOSURE_FALLBACK.get(closure, (closure,)):
+        for f in (True, False) if flanged else (False,):
+            if row.offers(c, f):
+                return c, f
+    return closure, False
+
+
+def closure_choices(series, name=AUTO):
+    """Closures to offer for a size, plain or flanged (for 'Auto': any size of the series)."""
+    rows = load_table(series) if name == AUTO else [get_row(series, name)]
+    listed = {c for r in rows if r for c in CLOSURES if r.offers(c) or r.offers(c, True)}
+    return [c for c in CLOSURES if c in listed] or list(CLOSURES)
 
 
 FIT_TOLERANCE = 0.01  # mm: an edge this close to a bore / OD fits it
@@ -541,9 +645,10 @@ def search(name=None, d=None, D=None, B=None, tol=0.0):
     name: designation or its start ("62" finds 62xx and 62x), parsed with
     parse_designation(); it may also be a size "8x22" / "8x22x7" (ID x OD [x height]).
     d, D, B: bore, outside diameter, width in mm, matched within `tol`. B also matches
-    the shielded width. Results are sorted by bore, then OD, width and designation.
+    the shielded width. A closure or flange in the name ("MR105-2RS", "MF41X") keeps only
+    sizes the table lists with it. Results are sorted by bore, then OD, width and designation.
     """
-    flanged = False
+    closure, flanged = None, False
     if name:
         size = _SIZE_RE.match(name)
         if size:
@@ -553,7 +658,7 @@ def search(name=None, d=None, D=None, B=None, tol=0.0):
                 B = float(size.group(3))
             name = None
         else:
-            name, _, flanged = parse_designation(name)
+            name, closure, flanged = parse_designation(name)
 
     def near(a, b):
         return b is None or abs(a - b) <= tol + 1e-9
@@ -563,7 +668,7 @@ def search(name=None, d=None, D=None, B=None, tol=0.0):
         for r in load_table(series):
             if name and not r.name.upper().startswith(name):
                 continue
-            if flanged and not r.has_flange:
+            if not r.offers(None if kind(r) in NO_CLOSURES else closure, bool(flanged)):
                 continue
             if not (near(r.d, d) and near(r.D, D)):
                 continue

@@ -53,22 +53,30 @@ dimensions, leaving out the smallest sizes those types aren't made in.
 
 ## 4. Data
 
-- CSV columns: `Designation,d,D,B,r` plus `B_shielded` (wider closed miniatures) and
-  `D1,C1` (flange). Families with more dimensions have their own columns (tapered T/B/C,
+- CSV columns: `Designation,d,D,B,r` plus `B_shielded` (wider closed miniatures),
+  `D1,C1` (flange) and, in `mr.csv`, `r_shielded,D1_shielded,C1_shielded` (corner radius
+  and flange of shielded sizes where NSK lists different ones) and `closures,
+  flanged_closures` (what the size comes with; a table without them offers every closure).
+- One reference source per table, never mixed within it: vendors sell different
+  bearings under the same miniature name (NMB's MR52 is 1.5 / 2.3 mm wide, NSK's 2 /
+  2.5 mm), so a table that mixed them could describe a bearing nobody makes. Families with more dimensions have their own columns (tapered T/B/C,
   LM grooves and flanges). `#` lines are comments.
 - Sources: ISO 15 / 104 / 355 boundary tables, ABMA inch sizes, public maker tables
-  (Samick for LM, PTI and BKZ for tapered cone and cup widths), common miniature listings.
+  (Samick for LM, PTI and BKZ for tapered cone and cup widths, NSK for every MR / MF
+  size), common miniature listings.
 - Every table is cross-checked against SKF's public product tables with the git-ignored
   `tools/dev/verify_skf.py`; only the comparison is kept, nothing fetched is stored:
   - all ISO series, 511, 72/73, 12/13/22/23, NU, tapered (d, D, T), needle and AXK match;
   - R: all closed widths match; open R6 differs by rounding (7/32"); open R8 / R10 keep the
     standard 1/4" / 9/32" where SKF lists its own wider designs;
   - corner radii taken from SKF where it gives standard ISO 582 values (688/689, 6804,
-    MR52, MR62, MR106, MR126); 6816, 6817, 6915 keep the ISO values;
+    MR62, MR106); 6816, 6817, 6915 keep the ISO values; MR radii are NSK's, open and shielded;
   - MR62 and MR115 share d × D with ISO 692 / 685: two naming families, both kept;
-  - not sold by SKF (unverified): 636–639, 691, 6919, 6920, MR117, MR137, HK0708 and the
+  - MR117 and MR137 (not sold by SKF) are checked against NSK only;
+  - not sold by SKF (unverified): 636–639, 691, 6919, 6920, HK0708 and the
     smallest R sizes.
-- Approximate: miniature shielded widths and flange dimensions (vendor-dependent).
+- Approximate: miniature shielded widths and flange dimensions (vendor-dependent; MR
+  follows NSK).
 
 ## 5. Computed internals
 

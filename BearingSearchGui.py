@@ -115,7 +115,8 @@ class SearchPanel:
         self.flange_shape = flanged if flanged in BD.FLANGE_SHAPES else "Round"
         self.table.setRowCount(len(self.results))
         for i, (series, r) in enumerate(self.results):
-            shown = BD.full_designation(r, self.closure, self.flanged, self.flange_shape)
+            closure, flanged = BD.resolve(r, self.closure, self.flanged)
+            shown = BD.full_designation(r, closure, flanged, self.flange_shape)
             cells = [
                 shown,
                 series,
@@ -123,7 +124,7 @@ class SearchPanel:
                 _num(r.D),
                 _num(r.B),
                 _num(r.B_shielded),
-                "%gx%g" % (r.D1, r.C1) if r.has_flange else "",
+                "%gx%g" % r.flange(closure) if r.has_flange else "",
             ]
             for j, text in enumerate(cells):
                 item = QtGui.QTableWidgetItem(text)
@@ -154,6 +155,7 @@ class SearchPanel:
         if hit is None or App.ActiveDocument is None:
             return
         series, row = hit
+        closure, flanged = BD.resolve(row, self.closure, self.flanged)
         doc = App.ActiveDocument
         doc.openTransaction("Add bearing")
         created = []
@@ -163,8 +165,8 @@ class SearchPanel:
                 row.name,
                 attach_to=target,
                 doc=doc,
-                Closure=self.closure,
-                Flanged=self.flanged,
+                Closure=closure,
+                Flanged=flanged,
                 FlangeShape=self.flange_shape,
             )
             created.append(obj)

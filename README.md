@@ -38,7 +38,7 @@ menu lists every series by family. You get a common default size (608, 625, R188
 | **63** | Deep groove, heavy | 6300 |
 | **68** (618) | Thin section | 688 (8 × 16 × 4) |
 | **69** (619) | Thin section | 695 |
-| **MR** | Metric miniature | MR105 (5 × 10 × 3) |
+| **MR** | Metric miniature, MR31 to MR148 | MR105 (5 × 10 × 3) |
 | **R** | Inch miniature | R188 (1/4" × 1/2" × 1/8"), fidget spinners and RC; FR188 flanged |
 | **72**, **73** | Angular contact, 40° (B) | 7204B: same size as a 6204, takes axial load from one side |
 | **511** | Thrust ball bearing | 51104 (20 × 35 × 10): turntables, lazy susans, axial loads |
@@ -52,7 +52,8 @@ menu lists every series by family. You get a common default size (608, 625, R188
 
 **Open**, **Z** / **ZZ** (metal shields) and **RS** / **2RS** (rubber seals), with the wider
 shielded width of miniature bearings where it differs (688 is 4 mm open, 5 mm as 688ZZ).
-Miniature sizes also come **flanged** (F688, MF105, FR188).
+Miniature sizes also come **flanged** (F688, MF105, FR188). MR sizes come only with the
+closures and flanges NSK sells (open and ZZ, 2RS on MR115 and MR148).
 
 <p align="center">
   <img src="images/closures.png" width="860" alt="608 open, 608ZZ, 608-2RS and flanged F688ZZ">
@@ -279,7 +280,7 @@ no load ratings, speeds or other catalogue data are included.
 | Table | Where the dimensions come from | Cross-checked against |
 |---|---|---|
 | Series 60, 62, 63, 68, 69 (`iso15_*.csv`) | ISO 15 boundary dimensions; shielded widths and flanges from common miniature listings | [SKF's public deep groove ball bearing table](https://www.skf.com/group/products/rolling-bearings/ball-bearings/deep-groove-ball-bearings): every size SKF sells matches, and corner radii were checked per bearing |
-| MR miniatures (`mr.csv`) | Common metric miniature listings (Minebea/NMB naming) | SKF's table for the closed widths |
+| MR miniatures (`mr.csv`) | NSK's product page for each size, open, shielded and flanged (e.g. [MR105](https://www.nsk.com/engineering/mr105-esm-md.html), [MR105ZZ](https://www.nsk.com/engineering/mr105zz-esm-md.html), [MF105ZZ](https://www.nsk.com/engineering/mf105zzmc3-apn.html)) | SKF's table for the closed widths |
 | Thrust 511 (`thrust_511.csv`) | ISO 104 boundary dimensions, dimension series 11 | SKF's public thrust ball bearing table: every row matches |
 | Series 22, 23 (`iso15_22.csv`, `iso15_23.csv`) | ISO 15 dimension series 22 / 23 | SKF's self-aligning and cylindrical roller tables |
 | Self-aligning 12 / 13, cylindrical NU2 / NU3 / NU22 / NU23 | Taken from the 62 / 63 / 22 / 23 tables (ISO 15 shares the boundary dimensions) | SKF's self-aligning and cylindrical roller tables: all sizes match |
@@ -292,8 +293,8 @@ no load ratings, speeds or other catalogue data are included.
 The details of each check, including the few values where sources disagree and which one
 we use, are in [PLAN.md](PLAN.md) §4.
 
-Shielded widths and flange dimensions of miniature bearings vary by vendor and are
-approximate: check `BRData/*.csv` against your supplier's sheet before relying on them for
+Shielded widths and flange dimensions of miniature bearings vary by vendor (the MR table
+follows NSK) and are approximate: check `BRData/*.csv` against your supplier's sheet before relying on them for
 tight fits. The tables are plain CSV, so they are easy to correct.
 
 ## Development

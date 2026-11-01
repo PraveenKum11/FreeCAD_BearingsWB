@@ -7,7 +7,7 @@ No load ratings, speeds or other catalogue data are included.
 | Table | Dimensions from | Checked against |
 |---|---|---|
 | Deep groove 60, 62, 63, 68, 69 | ISO 15 | SKF's public table, every size SKF sells |
-| MR miniatures | Common miniature listings | SKF (closed widths) |
+| MR miniatures | NSK's product page for every size and closure, plain and flanged | SKF (closed widths) |
 | Inch R | ABMA inch dimensions × 25.4 | SKF (R144…R12), a miniature vendor's chart (FR flanges) |
 | Angular contact 72 / 73 | The 62 / 63 tables (ISO 15) | SKF's angular contact table |
 | Thrust 511 | ISO 104 series 11 | SKF's thrust table |
@@ -16,6 +16,6 @@ No load ratings, speeds or other catalogue data are included.
 | Needle HK / NK, AXK | Common needle bearing sizes | SKF's needle tables |
 | LM bushings | Samick's catalog | G2k and Tuli tables |
 
-Miniature shielded widths and flanges vary by vendor: check the CSV
+Miniature shielded widths and flanges vary by vendor (MR follows NSK): check the CSV
 against your supplier's sheet before relying on it for tight fits. The tables are plain
 CSV, so they are easy to correct. The details of every check are in `PLAN.md` §4.

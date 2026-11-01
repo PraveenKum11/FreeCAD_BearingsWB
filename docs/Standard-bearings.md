@@ -19,6 +19,11 @@ extruders, miniatures in RC models, inch R sizes in fidget spinners.
 single closure sits on the top face. Miniature bearings are often wider when shielded
 (688 is 4 mm open, 5 mm as 688ZZ); the workbench uses the right width.
 
+**MR** sizes follow NSK, so they come only with the closures NSK sells: open and ZZ, plus
+2RS on MR115 and MR148. The `Closure` list shows only what the chosen size comes with. A
+document asking for a closure or flange the size doesn't have gets the nearest one, with
+a warning in the report view (MF41XZZ becomes MR41XZZ).
+
 Miniature sizes also come **flanged** (`Flanged`): F688, MF105, FR188. In a hole, the
 flange rests on the face and only the body goes in.
 

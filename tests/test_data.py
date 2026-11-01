@@ -137,6 +137,42 @@ class Tables(unittest.TestCase):
         self.assertEqual((r188.d, r188.D, r188.B, r188.B_shielded), (6.35, 12.7, 3.175, 4.762))
         self.assertEqual((r8.d, r8.D), (12.7, 28.575))
 
+    def test_mr_nsk(self):
+        """MR sizes follow NSK: MR104 open 3 / ZZ 4 wide; MF105ZZ has a larger flange
+        (11.6 x 0.8) than the open MF105 (11.2 x 0.6)."""
+        r = BD.get_row("MR", "MR104")
+        self.assertEqual((r.d, r.D, r.width("Open"), r.width("ZZ")), (4, 10, 3, 4))
+        r = BD.get_row("MR", "MR105")
+        self.assertEqual(r.flange("Open"), (11.2, 0.6))
+        self.assertEqual(r.flange("ZZ"), (11.6, 0.8))
+        self.assertEqual(BD.get_row("MR", "MR106").flange("ZZ"), (11.2, 0.6))
+        self.assertFalse(BD.get_row("MR", "MR115").has_flange)
+        r = BD.get_row("MR", "MR84")
+        self.assertEqual((r.radius("Open"), r.radius("ZZ")), (0.15, 0.1))
+        r = BD.get_row("MR", "MR41X")
+        self.assertEqual((r.d, r.D, r.B, r.B_shielded), (1.2, 4, 1.8, 2.5))
+        self.assertEqual(BD.parse_designation("MF41XZZ"), ("MR41X", "ZZ", True))
+        self.assertEqual(BD.full_designation(r, "ZZ", True), "MF41XZZ")
+
+    def test_mr_closures(self):
+        """MR sizes come only with the closures NSK sells; others fall back to the nearest."""
+        mr = lambda n: BD.get_row("MR", n)  # noqa: E731
+        self.assertTrue(mr("MR105").offers("ZZ", True))
+        self.assertFalse(mr("MR105").offers("2RS") or mr("MR105").offers("Z"))
+        self.assertEqual(BD.resolve(mr("MR105"), "2RS", False), ("ZZ", False))
+        self.assertEqual(BD.resolve(mr("MR41X"), "ZZ", True), ("ZZ", False))
+        self.assertEqual(BD.resolve(mr("MR126"), "Open", False), ("ZZ", False))
+        self.assertEqual(BD.resolve(mr("MR126"), "Open", True), ("Open", True))
+        self.assertEqual(BD.resolve(mr("MR31"), "ZZ", True), ("Open", False))
+        self.assertEqual(BD.resolve(BD.get_row("62", "6204"), "RS", False), ("RS", False))
+        self.assertEqual(BD.closure_choices("MR", "MR105"), ["Open", "ZZ"])
+        self.assertEqual(BD.closure_choices("MR", "MR115"), ["ZZ", "2RS"])
+        self.assertEqual(BD.closure_choices("MR"), ["Open", "ZZ", "2RS"])
+        self.assertEqual(BD.closure_choices("60", "608"), BD.CLOSURES)
+        self.assertEqual(BD.search("MR105-2RS"), [])
+        self.assertEqual([r.name for _, r in BD.search("MR148-2RS")], ["MR148"])
+        self.assertNotIn("MR41X", [r.name for _, r in BD.search("MF41XZZ")])
+
 
 class Designations(unittest.TestCase):
     def test_parse_designation(self):

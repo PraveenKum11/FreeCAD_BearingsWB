@@ -116,6 +116,21 @@ try:
         "inserted %s %s %s" % (lm.Label, lm.Flanged, lm.FlangeShape),
     )
     doc.removeObject(lm.Name)
+    # MR sizes come only with NSK's closures: MR105 has no 2RS, MR115 is never open
+    s.name.setText("MR105-2RS")
+    pump(0.1)
+    expect(s.count.text() == "0 bearings", "no MR105-2RS: " + s.count.text())
+    s.name.setText("MR115")
+    pump(0.1)
+    expect(s.table.item(0, 0).text() == "MR115ZZ", "MR115 listed as " + s.table.item(0, 0).text())
+    s.insert()
+    mr = [o for o in doc.Objects if getattr(o, "Series", "") == "MR"][0]
+    expect(
+        (mr.Label, mr.Closure, mr.getEnumerationsOfProperty("Closure"))
+        == ("MR115ZZ", "ZZ", ["ZZ", "2RS"]),
+        "inserted %s %s %s" % (mr.Label, mr.Closure, mr.getEnumerationsOfProperty("Closure")),
+    )
+    doc.removeObject(mr.Name)
     expect(
         "Bearings_Insert_LM" in Gui.listCommands() and "Bearings_Insert_R" in Gui.listCommands(),
         "LM and R insert commands",

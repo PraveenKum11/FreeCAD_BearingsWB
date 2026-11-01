@@ -1,19 +1,35 @@
-# Boundary dimensions per ISO 15 (d, D, B, r_s min) and common miniature listings.
-# B_shielded: width of Z/ZZ/RS/2RS variants if different from open width (approximate).
-# D1, C1: flange OD and flange width for F-prefixed variants (approximate).
-Designation,d,D,B,r,B_shielded,D1,C1
-MR52,2,5,1.5,0.08,2.5,6.2,0.6
-MR62,2,6,2.5,0.15,,7.2,0.6
-MR63,3,6,2,0.1,2.5,7.2,0.6
-MR74,4,7,2,0.1,2.5,8.2,0.6
-MR84,4,8,2,0.1,3,9.2,0.6
-MR85,5,8,2,0.1,2.5,9.2,0.6
-MR95,5,9,2.5,0.15,3,10.2,0.6
-MR105,5,10,3,0.15,4,11.2,0.6
-MR106,6,10,2.5,0.15,3,11.2,0.6
-MR115,5,11,4,0.15,,12.5,0.8
-MR117,7,11,2.5,0.1,3,12.2,0.6
-MR126,6,12,3,0.2,4,13.6,0.8
-MR128,8,12,2.5,0.1,3.5,13.6,0.6
-MR137,7,13,3,0.15,4,15,1.0
-MR148,8,14,3.5,0.15,4,15.6,0.8
+# Metric miniature (MR / MF) boundary dimensions from NSK's product pages:
+#   https://www.nsk.com/engineering/<designation>-esm-md.html  (MR open, MR...ZZ)
+#   https://www.nsk.com/engineering/<designation>mc3-apn.html  (MF flanged, open and ZZ)
+#   e.g. mr105-esm-md, mr105zz-esm-md, mf105mc3-apn, mf105zzmc3-apn. NSK names some sizes
+#   with a B suffix (MR52B, MR104B) or ZZ1 for the shielded one.
+# B, r: open bearing (MR126: open only as MF126; MR115: never open, so the shielded values).
+# B_shielded, r_shielded: width and minimum chamfer of the shielded (ZZ) bearing where
+#   NSK lists a different value; also used for 2RS (NSK's DD / VV seals, same sizes as ZZ).
+# D1, C1: flange OD and width of the open MF; D1_shielded, C1_shielded: of the shielded MF
+#   where NSK lists a different flange.
+# closures, flanged_closures: what NSK sells, plain (MR) and flanged (MF); the workbench
+#   offers nothing else. 2RS stands for NSK's DD (contact) and VV (non-contact) seals.
+Designation,d,D,B,r,B_shielded,r_shielded,D1,C1,D1_shielded,C1_shielded,closures,flanged_closures
+MR31,1,3,1.5,0.05,,,,,,,Open,
+MR41X,1.2,4,1.8,0.1,2.5,,4.8,0.4,,,Open ZZ,Open
+MR52,2,5,2,0.1,2.5,,6.2,0.6,,,Open ZZ,Open ZZ
+MR62,2,6,2.5,0.15,,,7.2,0.6,,,Open ZZ,Open
+MR63,3,6,2,0.1,2.5,,7.2,0.6,,,Open ZZ,Open ZZ
+MR72,2,7,2.5,0.15,3,,8.2,0.6,,,Open ZZ,Open ZZ
+MR74,4,7,2,0.1,2.5,,8.2,0.6,,,Open ZZ,Open ZZ
+MR82X,2.5,8,2.5,0.2,,,9.2,0.6,,,Open,Open
+MR83,3,8,2.5,0.15,,,9.2,0.6,,,Open,Open
+MR84,4,8,2,0.15,3,0.1,9.2,0.6,,,Open ZZ,Open ZZ
+MR85,5,8,2,0.1,2.5,,9.2,0.6,,,Open ZZ,Open ZZ
+MR93,3,9,2.5,0.2,4,0.15,10.2,0.6,10.6,0.8,Open ZZ,Open ZZ
+MR95,5,9,2.5,0.15,3,,10.2,0.6,,,Open ZZ,Open ZZ
+MR104,4,10,3,0.2,4,0.15,11.2,0.6,11.6,0.8,Open ZZ,Open ZZ
+MR105,5,10,3,0.15,4,,11.2,0.6,11.6,0.8,Open ZZ,Open ZZ
+MR106,6,10,2.5,0.15,3,0.1,11.2,0.6,,,Open ZZ,Open ZZ
+MR115,5,11,4,0.15,,,,,,,ZZ 2RS,
+MR117,7,11,2.5,0.15,3,0.1,12.2,0.6,,,Open ZZ,Open ZZ
+MR126,6,12,3,0.2,4,0.15,13.2,0.6,13.6,0.8,ZZ,Open ZZ
+MR128,8,12,2.5,0.15,3.5,0.1,13.2,0.6,13.6,0.8,Open ZZ,Open ZZ
+MR137,7,13,3,0.2,4,0.15,14.2,0.6,14.6,0.8,Open ZZ,Open ZZ
+MR148,8,14,3.5,0.2,4,0.15,15.6,0.8,,,Open ZZ 2RS,Open ZZ

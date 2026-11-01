@@ -146,6 +146,21 @@ class Flanged(DocumentTest):
         self.assertEqual(f.FullDesignation, "MF105ZZ")
         self.assertTrue(close(f.Width.Value, 4.0), "MR105ZZ shielded width %.2f" % f.Width.Value)
 
+    def test_closures_follow_size(self):
+        """The Closure choices are the size's; one it doesn't come with is replaced."""
+        b = BearingBase.make_bearing("MR", "MR148", doc=self.doc, Closure="2RS")
+        self.assertEqual(b.FullDesignation, "MR148-2RS")
+        b.Designation = "MR105"
+        self.doc.recompute()
+        self.assertEqual(b.getEnumerationsOfProperty("Closure"), ["Open", "ZZ"])
+        self.assertEqual(b.FullDesignation, "MR105ZZ")
+        # MR126 comes open only with a flange: without one it is built as MR126ZZ
+        b = BearingBase.make_bearing("MR", "MR126", doc=self.doc, Flanged=True)
+        self.assertEqual(b.FullDesignation, "MF126")
+        b.Flanged = False
+        self.doc.recompute()
+        self.assertEqual(b.FullDesignation, "MR126ZZ")
+
 
 class PlateWithHoles(DocumentTest):
     """Bearings in several equal holes of one plate are 634, 634_001, 634_002 (not 635,

@@ -205,20 +205,21 @@ def _annulus(x_in, x_out, z0, z1):
     )
 
 
-def _outer_top(row, flanged, r):
+def _outer_top(row, closure, flanged, r):
     """Profile points for the OD side going up to z = 0 (with or without flange)."""
     R = row.D / 2
     if flanged:
-        rf = min(r, 0.3 * row.C1)
-        return [("p", R, -row.C1, 0), ("p", row.D1 / 2, -row.C1, rf), ("p", row.D1 / 2, 0, rf)]
+        D1, C1 = row.flange(closure)
+        rf = min(r, 0.3 * C1)
+        return [("p", R, -C1, 0), ("p", D1 / 2, -C1, rf), ("p", D1 / 2, 0, rf)]
     return [("p", R, 0, r)]
 
 
 def make_envelope(row, closure, flanged):
     B = row.width(closure)
-    r = row.r
+    r = row.radius(closure)
     items = [("p", row.d / 2, -B, r), ("p", row.D / 2, -B, r)]
-    items += _outer_top(row, flanged, r)
+    items += _outer_top(row, closure, flanged, r)
     items += [("p", row.d / 2, 0, r)]
     return [(revolve(items), COLOR_STEEL)]
 
@@ -239,7 +240,7 @@ def make_deep_groove(row, closure, flanged, detail, angular=False):
     ins = Internals(row.d, row.D, row.B)
     Dw, dm = ins.Dw, ins.dm
     zc = -B / 2
-    r = row.r
+    r = row.radius(closure)
     xs, xl = ins.x_shoulder, ins.x_land
     top, bottom = _closure_sides(closure)
     cdims = _closure_dims(closure, B)
@@ -276,7 +277,7 @@ def make_deep_groove(row, closure, flanged, detail, angular=False):
     h_out_b = math.sqrt(ins.r_groove_out**2 - (xl_b - xc_out) ** 2)
     ro = min(r, 0.4 * (row.D / 2 - xl_b - rec))
     items = [("p", xl_b + rec if bottom else xl_b, -B, 0), ("p", row.D / 2, -B, ro)]
-    items += _outer_top(row, flanged, ro)
+    items += _outer_top(row, closure, flanged, ro)
     if top:
         items += [("p", xl_t + rec, 0, 0), ("p", xl_t + rec, -sd, 0), ("p", xl_t, -sd, 0)]
     else:
@@ -878,6 +879,7 @@ def build(row, closure, flanged, detail, flange_shape="Round", variant=None):
     linear = getattr(row, "is_linear", False)
     kind = getattr(row, "kind", None)
     key = (row.name, row.d, row.D, row.B, row.B_shielded, row.D1, row.C1, closure, flanged, detail)
+    key += tuple(getattr(row, a, None) for a in ("r_shielded", "D1_shielded", "C1_shielded"))
     key += (flange_shape, variant)
     if key not in _shape_cache:
         if kind == "selfaligning":

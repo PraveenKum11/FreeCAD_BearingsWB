@@ -123,6 +123,7 @@ class BearingObject:
         )
         obj.setEditorMode("FullDesignation", 1)
         self._add_fit_clearance(obj)
+        self._set_closures(obj)
 
         if attach_to:
             obj.BaseObject = attach_to
@@ -175,6 +176,29 @@ class BearingObject:
         obj.Variant = current
 
     @staticmethod
+    def _set_closures(obj):
+        """The Closure choices of the size (with 'Auto', of the whole series); a closure the
+        size doesn't come with becomes the nearest one it does."""
+        if not hasattr(obj, "Closure"):
+            return
+        choices = BD.closure_choices(obj.Series, obj.Designation)
+        if obj.getEnumerationsOfProperty("Closure") == choices:
+            return
+        current = obj.Closure
+        if current not in choices:
+            current = next(c for c in BD.CLOSURE_FALLBACK[current] + tuple(choices) if c in choices)
+            FreeCAD.Console.PrintWarning(
+                "{}: {} doesn't come with closure {}, {} used\n".format(
+                    obj.Label,
+                    "series " + obj.Series if obj.Designation == BD.AUTO else obj.Designation,
+                    obj.Closure,
+                    current,
+                )
+            )
+        obj.Closure = choices
+        obj.Closure = current
+
+    @staticmethod
     def _update_editor_modes(obj):
         """Show only the properties that apply to the series' family."""
         kind = BD.family(obj.Series)
@@ -202,7 +226,10 @@ class BearingObject:
             obj.Designation = names
             obj.Designation = current if current in names else BD.AUTO
             self._set_variants(obj)
+            self._set_closures(obj)
             self._update_editor_modes(obj)
+        elif prop == "Designation" and "Restore" not in obj.State:
+            self._set_closures(obj)
 
     def onDocumentRestored(self, obj):
         # documents from before linear bushings / v0.4 have no FlangeShape / Variant
@@ -214,6 +241,7 @@ class BearingObject:
             self._add_fit_clearance(obj)
         if getattr(self, "owner", None) is None:  # documents from before copy detection
             self.owner = obj.Name
+        self._set_closures(obj)
         self._update_editor_modes(obj)
 
     def _attached_frame(self, obj):
@@ -242,27 +270,33 @@ class BearingObject:
         if row is None:
             row = BD.load_table(obj.Series)[0]
 
-        flanged = obj.Flanged and row.has_flange
-        if obj.Flanged and not row.has_flange:
+        closure, flanged = BD.resolve(row, obj.Closure, obj.Flanged)
+        if obj.Flanged and not flanged:
             FreeCAD.Console.PrintWarning(
-                "{}: no flanged variant of {} in the table, flange ignored\n".format(
-                    obj.Label, row.name
+                "{}: no flanged {} in the table, flange ignored\n".format(
+                    obj.Label, BD.full_designation(row, obj.Closure, False)
+                )
+            )
+        if closure != obj.Closure:
+            FreeCAD.Console.PrintWarning(
+                "{}: {} doesn't come with closure {}, {} used\n".format(
+                    obj.Label, row.name, obj.Closure, closure
                 )
             )
 
         flange_shape = getattr(obj, "FlangeShape", "Round")
         variant = getattr(obj, "Variant", None)
-        shape, colors = BG.build(row, obj.Closure, flanged, obj.DetailLevel, flange_shape, variant)
+        shape, colors = BG.build(row, closure, flanged, obj.DetailLevel, flange_shape, variant)
         self.face_colors = colors
 
         ins = BG.internals(row)
         obj.BoreDiameter = row.d
         obj.OuterDiameter = row.D
-        obj.Width = row.width(obj.Closure) + (2 * BD.AS_WASHER if variant == "AXK + 2 AS" else 0.0)
+        obj.Width = row.width(closure) + (2 * BD.AS_WASHER if variant == "AXK + 2 AS" else 0.0)
         obj.PitchDiameter = ins.dm
         obj.BallDiameter = ins.Dw
         obj.BallCount = ins.Z
-        obj.FullDesignation = BD.full_designation(row, obj.Closure, flanged, flange_shape, variant)
+        obj.FullDesignation = BD.full_designation(row, closure, flanged, flange_shape, variant)
         if hasattr(obj, "FitClearance"):
             obj.FitClearance = BD.fit_clearance(row, frame[2], obj.MatchTo) if frame else 0.0
         self._update_label(obj)
@@ -275,7 +309,7 @@ class BearingObject:
                 normal = -normal
             elif flanged and obj.MatchTo == "Housing":
                 # in a hole the flange rests on the face and only the body goes in
-                offset += row.C1
+                offset += row.flange(closure)[1]
             placement = FreeCAD.Placement(
                 center + normal * offset, FreeCAD.Rotation(V(0, 0, 1), normal)
             )

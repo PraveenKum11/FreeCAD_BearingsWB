@@ -4,6 +4,30 @@ All notable changes to the Bearings workbench. Versions follow
 [semantic versioning](https://semver.org/): a minor version adds features, a patch
 version fixes bugs, a major version may break existing documents or scripts.
 
+## Unreleased
+
+### Added
+
+- MR sizes MR31, MR41X, MR72, MR82X, MR83, MR93 and MR104 (4 × 10, 3 mm open / 4 mm
+  shielded), with their MF flanged versions where NSK makes them.
+- Shielded miniatures can have their own corner radius and flange size (`r_shielded`,
+  `D1_shielded`, `C1_shielded` columns): MR84ZZ has r 0.1 where the open MR84 has 0.15,
+  MF105ZZ a 11.6 × 0.8 flange where the open MF105 has 11.2 × 0.6.
+- Sizes can list the closures they come with (`closures`, `flanged_closures` columns).
+  The `Closure` property then offers only those, and Find bearing lists only sizes that
+  come with a typed closure or flange.
+
+### Changed
+
+- The MR table now comes from NSK's product pages, every size checked one by one. Values
+  that changed: MR52 is 2 mm wide open (was 1.5); open corner radii of MR52, MR84,
+  MR117, MR128, MR137 and MR148; open flanges of MF126 / MF128 (13.2 × 0.6) and MF137
+  (14.2 × 0.6), with larger flanges for their ZZ versions. MR115 has no flanged version
+  any more, since NSK doesn't make one.
+- MR sizes come only with the closures NSK sells: open and ZZ, plus 2RS on MR115 and
+  MR148; no Z or RS, and MR31 / MR82X / MR83 open only. A document using another
+  closure or flange gets the nearest one NSK sells, with a warning in the report view.
+
 ## 1.1.1 (2026-10-17)
 
 ### Fixed

@@ -57,7 +57,7 @@ class AllShapes(unittest.TestCase):
         self.assertTrue(shape.isValid(), "invalid shape")
         self.assertEqual(len(colors), len(shape.Faces), "color count")
         bb = tight_bb(shape)
-        od = (row.K if flange_shape == "Square" else row.D1) if flanged else row.D
+        od = (row.K if flange_shape == "Square" else row.flange(closure)[0]) if flanged else row.D
         B = row.width(closure) + (2 * BD.AS_WASHER if variant == "AXK + 2 AS" else 0)
         self.assertTrue(
             close(bb.XLength, od, 0.01) and close(bb.YLength, od, 0.01),
@@ -99,6 +99,8 @@ class AllShapes(unittest.TestCase):
                     variants += [(True, s, None) for s in shapes]
                 for flanged, shape, variant in variants:
                     for closure in closures:
+                        if not row.offers(closure, flanged):
+                            continue
                         for detail in BG.DETAIL_LEVELS:
                             if detail == "Detailed" and row.name not in sample:
                                 continue
@@ -157,7 +159,8 @@ class AllShapes(unittest.TestCase):
             ("60", "608", "ZZ", False, "Round"),
             ("60", "608", "2RS", False, "Round"),
             ("68", "688", "Z", True, "Round"),
-            ("MR", "MR105", "RS", False, "Round"),
+            ("MR", "MR148", "2RS", False, "Round"),
+            ("62", "6204", "RS", False, "Round"),
             ("R", "R188", "2RS", False, "Round"),
             ("69", "6920", "ZZ", False, "Round"),
             ("72", "7204", "Open", False, "Round"),
