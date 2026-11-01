@@ -22,6 +22,7 @@ SERIES = {
     "60": ("Deep groove ball bearing, series 60", "iso15_60.csv", "608", "deepgroove"),
     "62": ("Deep groove ball bearing, series 62", "iso15_62.csv", "625", "deepgroove"),
     "63": ("Deep groove ball bearing, series 63", "iso15_63.csv", "6300", "deepgroove"),
+    "67": ("Thin deep groove ball bearing, series 67 (617)", "iso15_67.csv", "676", "deepgroove"),
     "68": ("Thin deep groove ball bearing, series 68 (618)", "iso15_68.csv", "688", "deepgroove"),
     "69": ("Thin deep groove ball bearing, series 69 (619)", "iso15_69.csv", "695", "deepgroove"),
     "MR": ("Metric miniature ball bearing, MR", "mr.csv", "MR105", "deepgroove"),
@@ -592,7 +593,7 @@ _SIZE_RE = re.compile(
 # closure codes at the end: 2RS / RS (SKF adds a digit: 2RS1), 2Z / ZZ / Z
 _CLOSURE_RE = re.compile(r"-?(?:(2RS|RS)\d?|(2Z|ZZ|Z))$", re.I)
 _CLOSURE_CODES = {"2RS": "2RS", "RS": "RS", "2Z": "ZZ", "ZZ": "ZZ", "Z": "Z"}
-_SKF_MINI_RE = re.compile(r"^6(1[89])/(\d)$")  # SKF 618/8 = 688, 619/5 = 695
+_SKF_MINI_RE = re.compile(r"^61([789])/(\d)$")  # SKF 617/6 = 676, 618/8 = 688, 619/5 = 695
 _LINEAR_FLANGE_RE = re.compile(r"^LM([FK])(\d.*)$")  # LMF8UU, LMK8LUU
 _ANGULAR_RE = re.compile(r"^(7[23]\d\d)(?:B|AC|C)[A-Z0-9/]*$")  # 7204B, 7204 BEP, 7305 BECBP
 _TAPERED_RE = re.compile(r"^(3[02][023]\d\d)[A-Z][A-Z0-9/]*$")  # 30204 J2/Q, 32005 X
@@ -603,8 +604,9 @@ def parse_designation(text):
 
     "F688-2RS" -> ("688", "2RS", True); "MF105ZZ" -> ("MR105", "ZZ", True);
     "FR188ZZ" -> ("R188", "ZZ", True); "608" -> ("608", None, False). SKF miniature
-    names "618/8" map to "688". Linear bushings: "LMK8UU" -> ("LM8UU", None, "Square"),
-    "LMF8LUU" -> ("LM8LUU", None, "Round"); `flanged` is then the flange shape.
+    names "618/8" map to "688" (617/6 to "676"). Linear bushings: "LMK8UU" -> ("LM8UU",
+    None, "Square"), "LMF8LUU" -> ("LM8LUU", None, "Round"); `flanged` is then the flange
+    shape.
     """
     t = text.strip().upper().replace(" ", "")
     m = _ANGULAR_RE.match(t) or _TAPERED_RE.match(t)
@@ -635,7 +637,7 @@ def parse_designation(text):
         t, flanged = t[1:], True
     m = _SKF_MINI_RE.match(t)
     if m:
-        t = "6" + ("8" if m.group(1) == "18" else "9") + m.group(2)
+        t = "6" + m.group(1) + m.group(2)
     return t, closure, flanged
 
 

@@ -154,6 +154,25 @@ class Tables(unittest.TestCase):
         self.assertEqual(BD.parse_designation("MF41XZZ"), ("MR41X", "ZZ", True))
         self.assertEqual(BD.full_designation(r, "ZZ", True), "MF41XZZ")
 
+    def test_series_67(self):
+        """ISO 15 series 17: open for every size, closures and flanges as SKF sells them;
+        the small sizes are the same bearings as NSK's MR63 ... MR128."""
+        rows = BD.load_table("67")
+        self.assertEqual([r.name for r in rows][:3], ["672", "673", "674"])
+        self.assertNotIn("679", [r.name for r in rows])
+        self.assertTrue(all(r.offers("Open") for r in rows))
+        for iso, mr in (("673", "MR63"), ("674", "MR74"), ("676", "MR106"), ("678", "MR128")):
+            a, b = BD.get_row("67", iso), BD.get_row("MR", mr)
+            self.assertEqual((a.d, a.D, a.B, a.r), (b.d, b.D, b.B, b.r), iso)
+        r = BD.get_row("67", "6700")
+        self.assertEqual((r.width("Open"), r.width("2RS")), (3, 4))
+        # flanged only sealed (W 61700 XR-2RS1): the flange goes before the closure changes
+        self.assertEqual(r.flange("2RS"), (16.5, 0.8))
+        self.assertEqual(BD.resolve(r, "2RS", True), ("2RS", True))
+        self.assertEqual(BD.resolve(r, "Open", True), ("Open", False))
+        self.assertEqual(BD.full_designation(BD.get_row("67", "676"), "Open", True), "F676")
+        self.assertEqual(BD.closure_choices("67", "6704"), ["Open", "ZZ"])
+
     def test_mr_closures(self):
         """MR sizes come only with the closures NSK sells; others fall back to the nearest."""
         mr = lambda n: BD.get_row("MR", n)  # noqa: E731
@@ -183,6 +202,7 @@ class Designations(unittest.TestCase):
             "6204-2RS1": ("6204", "2RS", False),
             "6204-2Z": ("6204", "ZZ", False),
             "618/8": ("688", None, False),
+            "617/6": ("676", None, False),
             "mr63": ("MR63", None, False),
             "FR188ZZ": ("R188", "ZZ", True),
             "R188-2RS": ("R188", "2RS", False),

@@ -8,6 +8,7 @@ extruders, miniatures in RC models, inch R sizes in fidget spinners.
 | **60** | Deep groove, light | 608 (8 × 22 × 7) |
 | **62** | Deep groove, medium | 625 (5 × 16 × 5), 6204 |
 | **63** | Deep groove, heavy | 6300 |
+| **67** (617) | Thin section, extra thin | 676 (6 × 10 × 2.5), 6700 |
 | **68** (618) | Thin section | 688 (8 × 16 × 4) |
 | **69** (619) | Thin section | 695 |
 | **MR** | Metric miniature | MR105 (5 × 10 × 3) |

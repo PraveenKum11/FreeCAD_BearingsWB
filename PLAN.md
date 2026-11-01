@@ -39,7 +39,7 @@ runs headless.
 
 | Family | Series | Table | Notes |
 |---|---|---|---|
-| Deep groove | 60, 62, 63, 68, 69, MR, R | `iso15_*.csv`, `mr.csv`, `inch_r.csv` | Closures Open/Z/ZZ/RS/2RS, flanged F/MF/FR |
+| Deep groove | 60, 62, 63, 67, 68, 69, MR, R | `iso15_*.csv`, `mr.csv`, `inch_r.csv` | Closures Open/Z/ZZ/RS/2RS, flanged F/MF/FR |
 | Angular contact | 72, 73 | from 62 / 63 | 40° (suffix B), unequal shoulders, open only |
 | Self-aligning | 12, 13, 22, 23 | from 62 / 63, `iso15_22/23.csv` | Two ball rows, spherical outer raceway |
 | Cylindrical | NU2, NU3, NU22, NU23 | from 62 / 63 / 22 / 23 | `Variant` NU / NJ |
@@ -71,7 +71,10 @@ dimensions, leaving out the smallest sizes those types aren't made in.
     standard 1/4" / 9/32" where SKF lists its own wider designs;
   - corner radii taken from SKF where it gives standard ISO 582 values (688/689, 6804,
     MR62, MR106); 6816, 6817, 6915 keep the ISO values; MR radii are NSK's, open and shielded;
-  - MR62 and MR115 share d × D with ISO 692 / 685: two naming families, both kept;
+  - MR62 and MR115 share d × D with ISO 692 / 685, and MR63, MR74, MR85, MR106, MR117,
+    MR128 are ISO 673–678: two naming families, both kept;
+  - 67: SKF sells only 672, 673, 676 (flanged) and 6700–6708, all stainless; 674, 675,
+    677, 678 checked against NSK's MR pages; 679 left out (no source found yet);
   - MR117 and MR137 (not sold by SKF) are checked against NSK only;
   - not sold by SKF (unverified): 636–639, 691, 6919, 6920, HK0708 and the
     smallest R sizes.

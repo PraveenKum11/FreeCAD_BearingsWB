@@ -1,0 +1,27 @@
+# Thin deep groove ball bearings, series 67 (SKF: 617): ISO 15 dimension series 17.
+# d, D, B, r (r_s min) of the open bearing, as SKF lists them where it sells the size
+#   (W 617/2, W 617/3, W 617/6 R, W 61700 ... W 61708, stainless steel):
+#   https://www.skf.com/group/products/rolling-bearings/ball-bearings/deep-groove-ball-bearings
+#   674, 675, 677, 678 (not sold by SKF): NSK's MR74, MR85, MR117, MR128, the same ISO
+#   sizes, e.g. https://www.nsk.com/engineering/mr74-esm-md.html
+#   679 (9 x 14) is left out until a source confirms its dimensions.
+# closures, flanged_closures: Open for every size (ISO 15); 2RS / ZZ and the flanges only
+#   where SKF sells them (2RS1 / 2RZ seals, 2ZS shields; 617/6 R and 61700 XR flanged).
+# B_shielded: width of the sealed bearing where SKF lists it wider than the open one.
+Designation,d,D,B,r,B_shielded,D1,C1,closures,flanged_closures
+672,2,4,1.2,0.05,,,,Open,
+673,3,6,2,0.1,,,,Open,
+674,4,7,2,0.1,,,,Open,
+675,5,8,2,0.1,,,,Open,
+676,6,10,2.5,0.15,,11.2,0.6,Open,Open
+677,7,11,2.5,0.15,,,,Open,
+678,8,12,2.5,0.15,,,,Open,
+6700,10,15,3,0.15,4,16.5,0.8,Open 2RS,2RS
+6701,12,18,4,0.2,,,,Open 2RS,
+6702,15,21,4,0.2,,,,Open 2RS,
+6703,17,23,4,0.2,,,,Open 2RS,
+6704,20,27,4,0.2,,,,Open ZZ,
+6705,25,32,4,0.2,,,,Open 2RS,
+6706,30,37,4,0.2,,,,Open 2RS,
+6707,35,44,5,0.3,,,,Open 2RS,
+6708,40,50,6,0.3,,,,Open 2RS,

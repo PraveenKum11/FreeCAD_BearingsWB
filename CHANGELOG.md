@@ -8,6 +8,10 @@ version fixes bugs, a major version may break existing documents or scripts.
 
 ### Added
 
+- Deep groove series 67 (SKF 617): 672 to 678 and 6700 to 6708 from ISO 15, checked
+  against SKF and, for the sizes SKF doesn't sell, NSK's identical MR sizes. Open for
+  every size; 2RS, ZZ and flanges only where SKF sells them. SKF names (617/6) are
+  recognised.
 - MR sizes MR31, MR41X, MR72, MR82X, MR83, MR93 and MR104 (4 × 10, 3 mm open / 4 mm
   shielded), with their MF flanged versions where NSK makes them.
 - Shielded miniatures can have their own corner radius and flange size (`r_shielded`,

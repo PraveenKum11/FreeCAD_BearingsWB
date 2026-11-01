@@ -136,7 +136,11 @@ class GroupCommand:
 
 # (command name, title, series): one drop-down per group
 GROUPS = [
-    ("Bearings_DeepGroove", "Deep groove ball bearings", ["60", "62", "63", "68", "69", "MR", "R"]),
+    (
+        "Bearings_DeepGroove",
+        "Deep groove ball bearings",
+        ["60", "62", "63", "67", "68", "69", "MR", "R"],
+    ),
     ("Bearings_AngularContact", "Angular contact ball bearings", ["72", "73"]),
     ("Bearings_SelfAligning", "Self-aligning ball bearings", ["12", "13", "22", "23"]),
     ("Bearings_Cylindrical", "Cylindrical roller bearings", ["NU2", "NU3", "NU22", "NU23"]),

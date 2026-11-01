@@ -10,7 +10,7 @@ correctly sized bearing that stays attached to it, or design a fully parametric
 
 | | |
 |---|---|
-| ![](images/closures.png) | **[[Standard bearings]]**: deep groove series 60, 62, 63, 68, 69, MR and inch R, with shields, seals and flanges, sized from the edge you click. |
+| ![](images/closures.png) | **[[Standard bearings]]**: deep groove series 60, 62, 63, 67, 68, 69, MR and inch R, with shields, seals and flanges, sized from the edge you click. |
 | ![](images/angular-thrust.png) | **[[Bearing types]]**: angular contact, thrust, self-aligning, cylindrical, tapered and needle roller bearings, AXK thrust needles. |
 | ![](images/linear-bushings.png) | **[[Linear bushings]]**: LM8UU and friends, long, round- and square-flanged. |
 | ![](images/printable-turntable.gif) | **[[Printable bearings]]**: races, snap-in cage and balls as PartDesign bodies, with a live preview. |

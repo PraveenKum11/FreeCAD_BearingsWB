@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/a84dfc59-cc6d-4e6a-b567-e3206875ef82
 Tested with FreeCAD 1.1. Inspired by
 [FreeCAD_FastenersWB](https://github.com/shaise/FreeCAD_FastenersWB).
 
-- **Standard bearings**: deep groove series 60, 62, 63, 68, 69, MR miniatures and inch
+- **Standard bearings**: deep groove series 60, 62, 63, 67, 68, 69, MR miniatures and inch
   R sizes, with shields, seals and flanges, sized automatically from the edge you click.
 - **Angular contact and thrust bearings**: 72xx B / 73xx B and 511xx.
 - **Self-aligning, cylindrical, tapered and needle roller bearings**: 12 / 13 / 22 / 23,
@@ -57,6 +57,7 @@ menu lists every series by family. You get a common default size (608, 625, R188
 | **60** | Deep groove, light | 608 (8 × 22 × 7), skateboard and 3D-printer bearing |
 | **62** | Deep groove, medium | 625 (5 × 16 × 5), 6204 |
 | **63** | Deep groove, heavy | 6300 |
+| **67** (617) | Thin section, extra thin | 676 (6 × 10 × 2.5), 6700 |
 | **68** (618) | Thin section | 688 (8 × 16 × 4) |
 | **69** (619) | Thin section | 695 |
 | **MR** | Metric miniature, MR31 to MR148 | MR105 (5 × 10 × 3) |
@@ -301,6 +302,7 @@ no load ratings, speeds or other catalogue data are included.
 | Table | Where the dimensions come from | Cross-checked against |
 |---|---|---|
 | Series 60, 62, 63, 68, 69 (`iso15_*.csv`) | ISO 15 boundary dimensions; shielded widths and flanges from common miniature listings | [SKF's public deep groove ball bearing table](https://www.skf.com/group/products/rolling-bearings/ball-bearings/deep-groove-ball-bearings): every size SKF sells matches, and corner radii were checked per bearing |
+| Series 67 (`iso15_67.csv`) | ISO 15 dimension series 17; sealed, shielded and flanged versions only where SKF sells them | SKF's table (672, 673, 676, 6700–6708, stainless W 617); NSK's MR74, MR85, MR117, MR128 for 674, 675, 677, 678. 679 is left out until a source confirms it |
 | MR miniatures (`mr.csv`) | NSK's product page for each size, open, shielded and flanged (e.g. [MR105](https://www.nsk.com/engineering/mr105-esm-md.html), [MR105ZZ](https://www.nsk.com/engineering/mr105zz-esm-md.html), [MF105ZZ](https://www.nsk.com/engineering/mf105zzmc3-apn.html)) | SKF's table for the closed widths |
 | Thrust 511 (`thrust_511.csv`) | ISO 104 boundary dimensions, dimension series 11 | SKF's public thrust ball bearing table: every row matches |
 | Series 22, 23 (`iso15_22.csv`, `iso15_23.csv`) | ISO 15 dimension series 22 / 23 | SKF's self-aligning and cylindrical roller tables |

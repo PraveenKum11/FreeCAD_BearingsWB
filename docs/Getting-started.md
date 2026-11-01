@@ -20,7 +20,7 @@ property editor; the shape updates on recompute.
 
 | Property | What it does |
 |---|---|
-| `Series` | The family member: 60, 62, 63, 68, 69, MR, R, 72, NU2, 302, HK, LM, … |
+| `Series` | The family member: 60, 62, 63, 67, 68, 69, MR, R, 72, NU2, 302, HK, LM, … |
 | `Designation` | The size, or `Auto` to match the attached edge |
 | `Closure` | Open, Z, ZZ, RS, 2RS (deep groove bearings) |
 | `Flanged`, `FlangeShape` | Flanged variants (F608, MF105, FR188, LMF / LMK) |

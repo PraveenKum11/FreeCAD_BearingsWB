@@ -7,6 +7,7 @@ No load ratings, speeds or other catalogue data are included.
 | Table | Dimensions from | Checked against |
 |---|---|---|
 | Deep groove 60, 62, 63, 68, 69 | ISO 15 | SKF's public table, every size SKF sells |
+| Deep groove 67 | ISO 15 (closures and flanges only where SKF sells them) | SKF (672, 673, 676, 6700–6708), NSK's MR74 / MR85 / MR117 / MR128 (674, 675, 677, 678) |
 | MR miniatures | NSK's product page for every size and closure, plain and flanged | SKF (closed widths) |
 | Inch R | ABMA inch dimensions × 25.4 | SKF (R144…R12), a miniature vendor's chart (FR flanges) |
 | Angular contact 72 / 73 | The 62 / 63 tables (ISO 15) | SKF's angular contact table |
