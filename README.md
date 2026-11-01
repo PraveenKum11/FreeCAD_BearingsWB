@@ -24,6 +24,27 @@ Tested with FreeCAD 1.1. Inspired by
   bodies, with a live preview while you set them up.
 - **Bearing BOM**: every bearing in the document with its quantity, saved as CSV.
 
+## Contents
+
+- [Standard bearings](#standard-bearings)
+  - [Closures and flanges](#closures-and-flanges)
+  - [Detail levels](#detail-levels)
+  - [Snap to a hole or a shaft](#snap-to-a-hole-or-a-shaft)
+  - [Angular contact and thrust bearings](#angular-contact-and-thrust-bearings)
+  - [Roller and needle bearings](#roller-and-needle-bearings)
+- [Linear bushings](#linear-bushings)
+- [Find bearing](#find-bearing)
+- [3D-printable bearings](#3d-printable-bearings)
+  - [The task panel](#the-task-panel)
+  - [Three ways to start](#three-ways-to-start)
+  - [Changing it later](#changing-it-later)
+- [Bearing BOM](#bearing-bom)
+- [Install](#install)
+- [Scripting](#scripting)
+- [Data sources and accuracy](#data-sources-and-accuracy)
+- [Development](#development)
+- [License](#license)
+
 ## Standard bearings
 
 The **Bearings** toolbar has one drop-down button per family (deep groove, angular
