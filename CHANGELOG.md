@@ -4,7 +4,7 @@ All notable changes to the Bearings workbench. Versions follow
 [semantic versioning](https://semver.org/): a minor version adds features, a patch
 version fixes bugs, a major version may break existing documents or scripts.
 
-## Unreleased
+## 1.2.0 (2026-11-01)
 
 ### Added
 

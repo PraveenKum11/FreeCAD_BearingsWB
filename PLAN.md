@@ -142,6 +142,7 @@ sizes, ball size and count). Properties that don't apply to a family are hidden.
   - [x] Wiki in `docs/`, published by GitHub Actions; draft for wiki.freecad.org.
 - [x] **v1.1.0** Fit allowance and Settings dialog, BOM spreadsheet (see CHANGELOG.md).
 - [x] **v1.1.1** No coincident faces between parts (section-view flicker).
+- [x] **v1.2.0** MR sizes from NSK (MR104 and others added), deep groove series 67.
 
 Releases: bump `<version>` and `<date>` in `package.xml`, add a CHANGELOG.md entry, tag
 `vX.Y.Z` and publish a GitHub release with that entry as its notes.
